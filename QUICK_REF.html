@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sui Intent Agent - Demo 录制指南</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+      color: #cdd6f4;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 30px 0;
+      border-bottom: 2px solid rgba(137, 180, 250, 0.2);
+    }
+
+    .header h1 {
+      font-size: 3em;
+      background: linear-gradient(90deg, #cba6f7, #89b4fa, #a6e3a1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 15px;
+      font-weight: 800;
+    }
+
+    .header p {
+      color: #a6adc8;
+      font-size: 1.2em;
+      margin-bottom: 10px;
+    }
+
+    .header .badge {
+      display: inline-block;
+      background: rgba(166, 227, 161, 0.2);
+      color: #a6e3a1;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.9em;
+      margin-top: 10px;
+    }
+
+    .section {
+      margin-bottom: 40px;
+    }
+
+    .section-title {
+      font-size: 2em;
+      color: #cba6f7;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid rgba(203, 166, 247, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title .emoji {
+      font-size: 1.2em;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(550px, 1fr));
+      gap: 25px;
+    }
+
+    .card {
+      background: rgba(49, 50, 68, 0.6);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 25px;
+      border: 2px solid rgba(137, 180, 250, 0.3);
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #cba6f7, #89b4fa);
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+      border-color: rgba(137, 180, 250, 0.5);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .card-number {
+      background: linear-gradient(135deg, #cba6f7, #89b4fa);
+      color: #1e1e2e;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.3em;
+      flex-shrink: 0;
+    }
+
+    .card h2 {
+      font-size: 1.5em;
+      color: #cdd6f4;
+      font-weight: 600;
+    }
+
+    .step-box {
+      background: rgba(30, 30, 46, 0.8);
+      border: 2px solid rgba(137, 180, 250, 0.3);
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.95em;
+      color: #a6e3a1;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .step-box:hover {
+      border-color: #89b4fa;
+      background: rgba(30, 30, 46, 1);
+      transform: scale(1.02);
+    }
+
+    .step-box:active {
+      transform: scale(0.98);
+    }
+
+    .step-label {
+      position: absolute;
+      top: -10px;
+      right: 10px;
+      background: linear-gradient(135deg, #f38ba8, #eba0ac);
+      color: #1e1e2e;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.75em;
+      font-weight: bold;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .expected {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+
+    .tag {
+      background: rgba(137, 180, 250, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.85em;
+      color: #89b4fa;
+      font-weight: 500;
+    }
+
+    .tag.success {
+      background: rgba(166, 227, 161, 0.2);
+      color: #a6e3a1;
+    }
+
+    .tag.highlight {
+      background: rgba(249, 226, 175, 0.2);
+      color: #f9e2af;
+    }
+
+    .notes {
+      background: rgba(243, 139, 168, 0.1);
+      border-left: 4px solid #f38ba8;
+      padding: 12px 15px;
+      margin-top: 15px;
+      font-size: 0.9em;
+      color: #fab387;
+      border-radius: 0 8px 8px 0;
+    }
+
+    .tips {
+      background: rgba(137, 180, 250, 0.1);
+      border: 2px solid rgba(137, 180, 250, 0.3);
+      border-radius: 16px;
+      padding: 25px;
+      margin-top: 30px;
+    }
+
+    .tips h3 {
+      color: #89b4fa;
+      margin-bottom: 15px;
+      font-size: 1.3em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tips ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .tips li {
+      padding: 8px 0;
+      padding-left: 30px;
+      position: relative;
+      line-height: 1.6;
+    }
+
+    .tips li:before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: #89b4fa;
+      font-weight: bold;
+      font-size: 1.2em;
+    }
+
+    .checklist {
+      background: rgba(166, 227, 161, 0.1);
+      border: 2px solid rgba(166, 227, 161, 0.3);
+      border-radius: 16px;
+      padding: 25px;
+      margin-top: 20px;
+    }
+
+    .checklist h3 {
+      color: #a6e3a1;
+      margin-bottom: 15px;
+      font-size: 1.3em;
+    }
+
+    .checklist-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      font-size: 1em;
+    }
+
+    .checklist-item input {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .copy-btn {
+      position: fixed;
+      bottom: 40px;
+      right: 40px;
+      background: linear-gradient(135deg, #cba6f7, #89b4fa);
+      color: #1e1e2e;
+      border: none;
+      padding: 18px 36px;
+      border-radius: 50px;
+      font-size: 1.2em;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      transition: all 0.3s;
+      z-index: 1000;
+    }
+
+    .copy-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .copied {
+      position: fixed;
+      bottom: 110px;
+      right: 40px;
+      background: #a6e3a1;
+      color: #1e1e2e;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-weight: bold;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 1000;
+    }
+
+    .copied.show {
+      opacity: 1;
+    }
+
+    .wallet-steps {
+      background: linear-gradient(135deg, rgba(203, 166, 247, 0.1), rgba(137, 180, 250, 0.1));
+      border: 2px solid rgba(203, 166, 247, 0.3);
+      border-radius: 16px;
+      padding: 25px;
+      margin-top: 30px;
+    }
+
+    .wallet-step {
+      display: flex;
+      gap: 15px;
+      padding: 15px;
+      margin: 10px 0;
+      background: rgba(30, 30, 46, 0.6);
+      border-radius: 10px;
+      align-items: flex-start;
+    }
+
+    .wallet-step-number {
+      background: linear-gradient(135deg, #cba6f7, #89b4fa);
+      color: #1e1e2e;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    .wallet-step-content {
+      flex: 1;
+    }
+
+    .wallet-step-title {
+      font-weight: bold;
+      color: #cdd6f4;
+      margin-bottom: 5px;
+      font-size: 1.1em;
+    }
+
+    .wallet-step-desc {
+      color: #a6adc8;
+      font-size: 0.95em;
+      line-height: 1.5;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .live-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background: #a6e3a1;
+      border-radius: 50%;
+      margin-right: 8px;
+      animation: pulse 2s infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎬 Sui Intent Agent - Demo 录制指南</h1>
+      <p>完整展示 AI + Sui PTB + Wallet 集成的端到端流程</p>
+      <div class="badge">
+        <span class="live-indicator"></span>
+        Sui Testnet • 真实交易 • 完整功能
+      </div>
+    </div>
+
+    <!-- 钱包操作步骤 -->
+    <div class="section">
+      <div class="section-title">
+        <span class="emoji">👛</span>
+        <span>第一阶段：钱包操作（30 秒）</span>
+      </div>
+
+      <div class="wallet-steps">
+        <div class="wallet-step">
+          <div class="wallet-step-number">1</div>
+          <div class="wallet-step-content">
+            <div class="wallet-step-title">连接钱包</div>
+            <div class="wallet-step-desc">
+              点击 "连接 Sui Wallet" 按钮 → 钱包弹出授权窗口 → 点击 "Connect"
+            </div>
+          </div>
+        </div>
+
+        <div class="wallet-step">
+          <div class="wallet-step-number">2</div>
+          <div class="wallet-step-content">
+            <div class="wallet-step-title">确认连接状态</div>
+            <div class="wallet-step-desc">
+              看到绿色框显示地址（如 0x8282...a236）→ 钱包已连接
+            </div>
+          </div>
+        </div>
+
+        <div class="wallet-step">
+          <div class="wallet-step-number">3</div>
+          <div class="wallet-step-content">
+            <div class="wallet-step-title">断开连接（可选）</div>
+            <div class="wallet-step-desc">
+              点击 "断开连接" 按钮展示断开功能 → 重新连接展示重连
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Demo 场景 -->
+    <div class="section">
+      <div class="section-title">
+        <span class="emoji">🎯</span>
+        <span>第二阶段：核心功能演示（2 分钟）</span>
+      </div>
+
+      <div class="grid">
+        <!-- 场景 1 -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-number">1</div>
+            <h2>简单 Swap 交易</h2>
+          </div>
+
+          <div class="step-box" onclick="copyText('把 10 SUI 换成 USDT，滑点 3%')">
+            把 10 SUI 换成 USDT，滑点 3%
+            <span class="step-label">点击复制</span>
+          </div>
+
+          <div class="expected">
+            <span class="tag success">✓ AI 解析</span>
+            <span class="tag success">✓ 5 步思考动画</span>
+            <span class="tag success">✓ 交易摘要</span>
+            <span class="tag highlight">⭐ 真实签名</span>
+            <span class="tag">置信度 95%+</span>
+          </div>
+
+          <div class="notes">
+            <strong>💡 展示重点：</strong>
+            <br>• 钱包签名弹窗
+            <br>• Transaction Digest 生成
+            <br>• 完整的端到端流程
+          </div>
+        </div>
+
+        <!-- 场景 2 -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-number">2</div>
+            <h2>复合操作（Swap + Transfer）</h2>
+          </div>
+
+          <div class="step-box" onclick="copyText('先换 20 SUI 成 USDC，然后转 10 USDC 给 0x82822dc11e12ec8cf8d4ed3f40cfee4f83a2a236')">
+            先换 20 SUI 成 USDC，然后转 10 USDC 给 0x8282...
+            <span class="step-label">点击复制</span>
+          </div>
+
+          <div class="expected">
+            <span class="tag success">✓ 多意图识别</span>
+            <span class="tag success">✓ PTB 原子执行</span>
+            <span class="tag">2 步操作</span>
+            <span class="tag highlight">⭐ 节省 Gas</span>
+          </div>
+
+          <div class="notes">
+            <strong>💡 展示重点：</strong>
+            <br>• 一个 PTB 包含多个操作
+            <br>• 原子执行（全部成功或全部失败）
+            <br>• Sui PTB 的核心优势
+          </div>
+        </div>
+
+        <!-- 场景 3 -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-number">3</div>
+            <h2>安全策略验证</h2>
+          </div>
+
+          <div class="step-box" onclick="copyText('把 10000 SUI 换成 USDT')">
+            把 10000 SUI 换成 USDT
+            <span class="step-label">点击复制</span>
+          </div>
+
+          <div class="expected">
+            <span class="tag">✗ 金额超限</span>
+            <span class="tag">策略拦截</span>
+            <span class="tag highlight">⭐ 友好提示</span>
+          </div>
+
+          <div class="notes">
+            <strong>⚠️ 注意：</strong>
+            <br>• 10000 > 1000（策略限制）
+            <br>• 系统拦截并提示
+            <br>• 展示安全机制
+          </div>
+        </div>
+
+        <!-- 场景 4 -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-number">4</div>
+            <h2>智能拆分</h2>
+          </div>
+
+          <div class="step-box" onclick="copyText('把我的 SUI 平均分成 3 份')">
+            把我的 SUI 平均分成 3 份
+            <span class="step-label">点击复制</span>
+          </div>
+
+          <div class="expected">
+            <span class="tag success">✓ Split 操作</span>
+            <span class="tag">33.33% + 33.33% + 33.34%</span>
+            <span class="tag highlight">⭐ 总和 100%</span>
+          </div>
+
+          <div class="notes">
+            <strong>💡 展示重点：</strong>
+            <br>• 自动比例计算
+            <br>• 确保总和为 100%
+            <br>• 避免资金丢失
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 录制技巧 -->
+    <div class="section">
+      <div class="section-title">
+        <span class="emoji">🎥</span>
+        <span>第三阶段：录制技巧</span>
+      </div>
+
+      <div class="tips">
+        <h3>🎯 录制要点</h3>
+        <ul>
+          <li><strong>全屏模式</strong>：浏览器按 F11，或使用 Cmd+Shift+5 选择整个屏幕</li>
+          <li><strong>鼠标移动</strong>：缓慢、平滑，提前规划路径</li>
+          <li><strong>输入节奏</strong>：每场景停顿 2-3 秒，让观众看清</li>
+          <li><strong>重点展示</strong>：钱包连接 → AI 思考动画 → 交易摘要 → 签名弹窗 → Transaction Digest</li>
+          <li><strong>多次录制</strong>：每个场景单独录，后期选最好的拼接</li>
+        </ul>
+      </div>
+
+      <div class="tips" style="margin-top: 20px; background: rgba(249, 226, 175, 0.1); border-color: rgba(249, 226, 175, 0.3);">
+        <h3 style="color: #f9e2af;">⚡ 快速提示</h3>
+        <ul>
+          <li><strong>钱包弹窗</strong>：等待 3 秒再点击 Approve，让观众看清交易内容</li>
+          <li><strong>思考动画</strong>：5 个步骤会依次完成，每个都有不同颜色和图标</li>
+          <li><strong>交易成功</strong>：会弹出 Digest 提示，可以快速展示</li>
+          <li><strong>断开连接</strong>：展示后可以重新连接，显示完整流程</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 录制清单 -->
+    <div class="section">
+      <div class="section-title">
+        <span class="emoji">✅</span>
+        <span>第四阶段：录制清单</span>
+      </div>
+
+      <div class="checklist">
+        <h3>📋 Demo 录制清单</h3>
+        <div class="checklist-item">
+          <input type="checkbox" id="check1">
+          <label for="check1">打开 http://localhost:3000（或线上地址）</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="check2">
+          <label for="check2">连接 Sui Wallet，展示地址</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="check3">
+          <label for="check3">场景 1：简单 Swap（展示签名和 Digest）</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="check4">
+          <label for="check4">场景 2：复合操作（展示多意图）</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="check5">
+          <label for="check5">场景 3：安全验证（展示策略拦截）</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="check6">
+          <label for="check6">场景 4：Split 拆分（展示计算能力）</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="check7">
+          <label for="check7">展示断开连接功能</label>
+        </div>
+        <div class="checklist-item">
+          <input type="checkbox" id="check8">
+          <label for="check8">重新连接，展示完整流程</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 提交材料 -->
+    <div class="section">
+      <div class="tips">
+        <h3>🚀 黑客松提交材料</h3>
+        <ul>
+          <li><strong>Demo 视频</strong>：3 分钟，展示完整流程（钱包 → 解析 → 签名 → 执行）</li>
+          <li><strong>GitHub 仓库</strong>：README 完善，代码清晰</li>
+          <li><strong>项目描述</strong>：AI + Sui PTB，自然语言生成可验证交易</li>
+          <li><strong>技术栈</strong>：Next.js 15, @mysten/dapp-kit, Turing API</li>
+          <li><strong>创新点</strong>：AI 意图解析 + PTB 原子执行 + 策略安全</li>
+        </ul>
+      </div>
+    </div>
+
+    <button class="copy-btn" onclick="openApp()">
+      🚀 打开应用
+    </button>
+
+    <div class="copied" id="copied">✓ 已复制！</div>
+  </div>
+
+  <script>
+    function copyText(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        const copied = document.getElementById('copied');
+        copied.classList.add('show');
+        setTimeout(() => {
+          copied.classList.remove('show');
+        }, 1500);
+      });
+    }
+
+    function openApp() {
+      window.open('http://localhost:3000', '_blank');
+    }
+  </script>
+</body>
+</html>

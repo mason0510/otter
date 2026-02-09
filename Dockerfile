@@ -8,10 +8,11 @@ RUN apk add --no-cache libc6-compat wget
 WORKDIR /app
 
 # 复制 package 文件
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json* pnpm-lock.yaml* ./
 
 # 安装依赖
-RUN npm ci
+# 注意：项目使用 pnpm，这里使用 npm install 来确保兼容性
+RUN npm install --legacy-peer-deps
 
 # 复制源代码
 COPY . .

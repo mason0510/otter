@@ -9,12 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@mysten/dapp-kit": "^1.0.1",
     "@mysten/sui": "^1.45.2",
-    "@mysten/sui.js": "^0.54.1",
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-slot": "^1.1.0",
-    "@tanstack/react-query": "^5.62.7",
     "chrome-remote-interface": "^0.34.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

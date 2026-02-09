@@ -1,0 +1,49 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!--
+    Logo for 'Otter - Sui Intent Composer'
+    Colors:
+    - Tech Blue (Sui Wave): #4A90E2
+    - Otter Brown-Orange: #D97706
+    - Dark details (Eyes/Nose): #434343
+    Style: Flat, simple, modern
+    -->
+
+    <!-- Group for the entire logo -->
+    <g id="Otter-Sui-Logo">
+
+        <!-- Sui Wave Element -->
+        <path
+            id="sui-wave"
+            d="M0 340 C 128 280, 256 420, 512 360 L 512 512 L 0 512 L 0 340 Z"
+            fill="#4A90E2"
+        />
+
+        <!-- Otter Group -->
+        <g id="otter">
+            <!-- Otter Head -->
+            <path
+                id="otter-head"
+                d="M175 355 C 130 340, 125 220, 210 195 C 256 180, 300 180, 340 205 C 425 240, 410 340, 365 355 L 175 355 Z"
+                fill="#D97706"
+            />
+
+            <!-- Otter Ears -->
+            <circle cx="170" cy="250" r="30" fill="#D97706"/>
+            <circle cx="380" cy="260" r="30" fill="#D97706"/>
+
+            <!-- Otter Face Details -->
+            <g id="otter-face">
+                <!-- Eyes -->
+                <circle cx="235" cy="278" r="14" fill="#434343"/>
+                <circle cx="315" cy="278" r="14" fill="#434343"/>
+
+                <!-- Nose -->
+                <path
+                    id="otter-nose"
+                    d="M 275 298 C 265 318, 295 318, 285 298 Q 280 290, 275 298 Z"
+                    fill="#434343"
+                />
+            </g>
+        </g>
+    </g>
+</svg>

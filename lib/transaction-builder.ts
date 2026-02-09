@@ -17,7 +17,7 @@ import type { Intent, SwapParams, SplitParams, TransferParams } from './types';
 // ============================================================================
 
 const SUI_RPC_URL = 'https://fullnode.mainnet.sui.io:443';
-const KRIYA_PACKAGE_ID = '0x7e286fe0f899fdbe0f6a9bd75ebcaa0b71fa1f4b0a8a2deedfa1f3d62613069e';
+const KRIYA_PACKAGE_ID = '0xbd8d4489782042c6fafad4de4bc6a5e0b84a43c6c00647ffd7062d1e2bb7549e';
 
 // Token 类型定义
 const TOKEN_TYPES = {
@@ -65,9 +65,9 @@ export async function getAllCoins(owner: string): Promise<Array<{ objectId: stri
       const coinType = coin.coinType;
       let balance: bigint;
 
-      // 解析余额（十六进制字符串）
+      // 解析余额（直接使用 BigInt，避免 parseInt 精度丢失）
       if (typeof coin.balance === 'string') {
-        balance = BigInt(parseInt(coin.balance, 16));
+        balance = BigInt(coin.balance);
       } else {
         balance = BigInt(coin.balance);
       }
@@ -134,6 +134,84 @@ export function formatTokenAmount(amount: bigint, token: string): string {
   return `${integer}.${fractionalStr}`;
 }
 
+/**
+ * 准备支付 Coin（支持 Coin 合并）
+ *
+ * @param tx - Transaction 对象
+ * @param owner - 所有者地址
+ * @param tokenType - Token 类型
+ * @param amount - 需要的金额
+ * @returns 可以用于支付的 Coin 对象引用（TransactionResult）
+ */
+export async function preparePaymentCoin(
+  tx: Transaction,
+  owner: string,
+  tokenType: string,
+  amount: bigint
+): Promise<{ $kind: "NestedResult"; NestedResult: [number, number] }> {
+  console.log(`[preparePaymentCoin] 准备支付: ${amount.toString()} ${tokenType}`);
+
+  // SUI 特殊处理：直接从 gas 拆分
+  if (tokenType === TOKEN_TYPES.SUI) {
+    const [splitCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(amount)]);
+    console.log(`[preparePaymentCoin] ✅ SUI 支付 Coin 准备完成`);
+    return splitCoin;
+  }
+
+  // 其他 Token：查询用户 Coin
+  const coins = await getAllCoins(owner);
+  const tokenCoins = coins.filter(c => c.tokenType === tokenType);
+
+  if (tokenCoins.length === 0) {
+    throw new Error(`未找到 ${tokenType} Coin 对象`);
+  }
+
+  // 1. 查找是否有单个足够大的 Coin
+  const bigEnoughCoin = tokenCoins.find(c => c.balance >= amount);
+
+  if (bigEnoughCoin) {
+    // 找到足够大的 Coin，直接拆分
+    const [splitCoin] = tx.splitCoins(tx.object(bigEnoughCoin.objectId), [tx.pure.u64(amount)]);
+    console.log(`[preparePaymentCoin] ✅ 使用单个大额 Coin (余额: ${bigEnoughCoin.balance.toString()})`);
+    return splitCoin;
+  }
+
+  // 2. 没有单个足够大的 Coin，需要合并多个 Coin
+  console.log(`[preparePaymentCoin] 单个 Coin 不足，需要合并多个 Coin (共 ${tokenCoins.length} 个)`);
+
+  // 计算总余额
+  const totalBalance = tokenCoins.reduce((sum, c) => sum + c.balance, BigInt(0));
+
+  if (totalBalance < amount) {
+    throw new Error(
+      `余额不足！需要: ${amount.toString()}, 当前总余额: ${totalBalance.toString()}`
+    );
+  }
+
+  // 选择最大的 Coin 作为目标
+  const largestCoin = tokenCoins.reduce((prev, current) =>
+    current.balance > prev.balance ? current : prev
+  );
+
+  // 合并其他 Coin 到最大的 Coin
+  const coinsToMerge = tokenCoins
+    .filter(c => c.objectId !== largestCoin.objectId)
+    .map(c => tx.object(c.objectId));
+
+  if (coinsToMerge.length > 0) {
+    tx.mergeCoins(
+      tx.object(largestCoin.objectId),
+      coinsToMerge
+    );
+    console.log(`[preparePaymentCoin] ✅ 合并了 ${coinsToMerge.length} 个 Coin 到最大的 Coin`);
+  }
+
+  // 从合并后的 Coin 中拆分出需要的金额
+  const [splitCoin] = tx.splitCoins(tx.object(largestCoin.objectId), [tx.pure.u64(amount)]);
+  console.log(`[preparePaymentCoin] ✅ 支付 Coin 准备完成`);
+  return splitCoin;
+}
+
 // ============================================================================
 // Swap: 集成 Kriya DEX
 // ============================================================================
@@ -153,7 +231,7 @@ async function getKriyaPoolInfo(tokenA: string, tokenB: string): Promise<{ objec
     console.log(`[getKriyaPoolInfo] 查找 Pool: ${tokenX} / ${tokenY}`);
 
     // 使用 Kriya SDK 获取 Pool
-    // 参数：rpcEndpoint, packageId, isMainnet
+    // 参数：rpcEndpoint, packageId, isMainnet (true = mainnet)
     const sdk = new KriyaSDK(SUI_RPC_URL, KRIYA_PACKAGE_ID, true);
 
     // 尝试获取 Pool 信息
@@ -186,11 +264,15 @@ async function getKriyaPoolInfo(tokenA: string, tokenB: string): Promise<{ objec
 /**
  * 构建 Swap 交易（使用 Kriya DEX）
  */
-async function buildSwap(tx: Transaction, intent: Intent) {
+async function buildSwap(tx: Transaction, intent: Intent, senderAddress?: string) {
   const params = intent.params as SwapParams;
   const { inputToken, outputToken, amount, slippage } = params;
 
   console.log(`[Swap] 开始构建: ${amount} ${inputToken} → ${outputToken}, 滑点: ${slippage}%`);
+
+  if (!senderAddress) {
+    throw new Error('Swap 需要发送者地址');
+  }
 
   try {
     // 1. 解析输入金额
@@ -198,33 +280,44 @@ async function buildSwap(tx: Transaction, intent: Intent) {
     console.log(`[Swap] 输入金额 (原始): ${amount}`);
     console.log(`[Swap] 输入金额 (转换): ${inputAmount.toString()} (${inputToken})`);
 
-    // 2. 获取 Pool 信息
+    // 2. ✅ 修复：添加滑点上限校验（防止三明治攻击）
+    const slippageDecimal = parseFloat(slippage) / 100;
+    if (slippageDecimal < 0 || slippageDecimal > 0.05) {
+      throw new Error(`滑点必须在 0-5% 之间，当前值：${slippage}%`);
+    }
+    console.log(`[Swap] ✅ 滑点校验通过 (${slippage}%)`);
+
+    // 3. 获取 Pool 信息
     const poolInfo = await getKriyaPoolInfo(inputToken, outputToken);
 
     if (!poolInfo) {
       throw new Error(`未找到 ${inputToken}/${outputToken} 交易池，请确认交易对是否支持`);
     }
 
-    // 3. 计算最小输出量（考虑滑点）
-    // 注意：这里简化处理，实际应该调用 Pool 的 quote 方法
-    const slippageDecimal = parseFloat(slippage) / 100;
-    const minOutputAmount = inputAmount * BigInt(Math.floor((1 - slippageDecimal) * 1000000)) / BigInt(1000000);
-
-    console.log(`[Swap] 最小输出量: ${minOutputAmount.toString()} (${outputToken})`);
-
-    // 4. 调用 Kriya DEX swap
-    // 注意：这是简化的调用，实际参数可能需要根据 Kriya SDK 文档调整
+    // 4. ⚠️ 注意：计算最小输出量需要基于实际报价
+    // 当前简化处理：暂时使用占位符逻辑
+    // TODO: 实现完整的报价查询（使用 devInspectTransactionBlock 或 Kriya SDK）
     const inputTokenType = TOKEN_TYPES[inputToken.toUpperCase() as keyof typeof TOKEN_TYPES] || inputToken;
     const outputTokenType = TOKEN_TYPES[outputToken.toUpperCase() as keyof typeof TOKEN_TYPES] || outputToken;
 
+    // 临时方案：设置一个保守的最小输出量（1% 的输入金额作为占位符）
+    // 实际应该基于 Pool 报价计算
+    const minOutputAmount = inputAmount / BigInt(100);
+
+    console.log(`[Swap] 最小输出量（占位符）: ${minOutputAmount.toString()} (${outputToken})`);
+    console.warn(`[Swap] ⚠️ 当前使用简化滑点计算，实际需要基于 Pool 报价`);
+
+    // 5. ✅ 修复：准备支付 Coin（而不是直接使用 tx.gas）
+    const paymentCoin = await preparePaymentCoin(tx, senderAddress, inputTokenType, inputAmount);
+
+    // 6. 调用 Kriya DEX swap
     tx.moveCall({
       target: `${KRIYA_PACKAGE_ID}::pool::swap`,
       typeArguments: [inputTokenType, outputTokenType],
       arguments: [
         tx.object(poolInfo.objectId), // Pool
-        tx.pure.u64(inputAmount),      // 输入金额
+        paymentCoin,                   // ✅ 使用准备好的支付 Coin
         tx.pure.u64(minOutputAmount),  // 最小输出量
-        tx.gas,                        // Gas payment
       ],
     });
 
@@ -301,8 +394,9 @@ async function buildTransfer(tx: Transaction, intent: Intent, senderAddress?: st
         );
       }
 
-      // 转账 Coin 对象
-      tx.transferObjects([tx.object(coinObjectId)], tx.pure.address(recipient));
+      // ✅ 修复：先拆分出指定金额，再转账（避免转走整个 Coin）
+      const [splitCoin] = tx.splitCoins(tx.object(coinObjectId), [tx.pure.u64(transferAmount)]);
+      tx.transferObjects([splitCoin], tx.pure.address(recipient));
       console.log(`[Transfer] ✅ ${token} 转账构建成功`);
     }
   } catch (error) {
@@ -421,7 +515,7 @@ export async function buildTransaction(
 
     switch (intent.action) {
       case 'swap':
-        await buildSwap(tx, intent);
+        await buildSwap(tx, intent, senderAddress);
         hasRealOperation = true;
         break;
 

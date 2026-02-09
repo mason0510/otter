@@ -52,6 +52,12 @@ export default function Home() {
   const parseIntent = async () => {
     if (!input.trim()) return;
 
+    // 检查钱包连接
+    if (!isConnected || !address) {
+      setError('请先连接钱包');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setIntents([]);
@@ -100,8 +106,8 @@ export default function Home() {
       updateStep('3', 'thinking');
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // 构建但不传入 address（只用于验证，不执行）
-      const transaction = await buildTransaction(data.intents);
+      // 构建时传入 address（从已连接的钱包获取）
+      const transaction = await buildTransaction(data.intents, address);
       const txData = transaction.serialize();
 
       updateStep('3', 'done');
@@ -231,7 +237,7 @@ export default function Home() {
               />
               <Button
                 onClick={parseIntent}
-                disabled={loading || !input.trim()}
+                disabled={loading || !input.trim() || !isConnected}
                 className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
               >
                 {loading ? (

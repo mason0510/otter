@@ -1,6 +1,6 @@
 /**
  * Otter - Sui Intent Composer - 主页面
- * Demo 模式：专注于 Intent 解析和 PTB 构建展示
+ * 完整版：包含钱包连接、Intent 解析、PTB 构建和交易执行
  */
 
 'use client';
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Loader2, Sparkles, AlertTriangle, CheckCircle2, Code, Copy } from 'lucide-react';
 import { buildTransaction } from '@/lib/transaction-builder';
+import WalletButton, { useWalletConnection } from '@/components/WalletButton';
 import type { Intent } from '@/lib/types';
 
 // 思考步骤类型
@@ -30,10 +31,15 @@ type TxSummary = {
 export default function Home() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [executing, setExecuting] = useState(false);
   const [intents, setIntents] = useState<Intent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([]);
   const [txSummary, setTxSummary] = useState<TxSummary | null>(null);
+  const [txDigest, setTxDigest] = useState<string | null>(null);
+
+  // 钱包连接
+  const { isConnected, address, signAndExecuteTransaction } = useWalletConnection();
 
   // 更新思考步骤状态
   const updateStep = (id: string, status: 'thinking' | 'done') => {
@@ -50,6 +56,7 @@ export default function Home() {
     setError(null);
     setIntents([]);
     setTxSummary(null);
+    setTxDigest(null);
 
     // 初始化思考步骤
     const steps: ThinkingStep[] = [
@@ -57,7 +64,6 @@ export default function Home() {
       { id: '2', text: '🧠 调用 AI 解析意图...', status: 'pending' },
       { id: '3', text: '🔧 构建 Transaction...', status: 'pending' },
       { id: '4', text: '✅ 安全校验通过', status: 'pending' },
-      { id: '5', text: '📊 生成交易摘要...', status: 'pending' },
     ];
     setThinkingSteps(steps);
 
@@ -94,7 +100,7 @@ export default function Home() {
       updateStep('3', 'thinking');
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // 使用真实的 transaction-builder
+      // 构建但不传入 address（只用于验证，不执行）
       const transaction = await buildTransaction(data.intents);
       const txData = transaction.serialize();
 
@@ -105,21 +111,67 @@ export default function Home() {
       await new Promise(resolve => setTimeout(resolve, 300));
       updateStep('4', 'done');
 
-      // 步骤 5: 生成摘要
-      updateStep('5', 'thinking');
-      await new Promise(resolve => setTimeout(resolve, 300));
-
       setTxSummary({
         intents: data.intents,
         txData,
         gasEstimate: '0.01 SUI',
       });
-      updateStep('5', 'done');
 
     } catch (err) {
       setError(err instanceof Error ? err.message : '未知错误');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 执行交易
+  const executeTransaction = async () => {
+    if (!isConnected) {
+      setError('请先连接钱包');
+      return;
+    }
+
+    if (!intents.length) {
+      setError('请先解析意图');
+      return;
+    }
+
+    if (!address) {
+      setError('无法获取钱包地址');
+      return;
+    }
+
+    setExecuting(true);
+    setError(null);
+
+    try {
+      // 1. 构建 Transaction（传入 senderAddress 用于安全验证）
+      const transaction = await buildTransaction(intents, address);
+
+      console.log('Transaction built:', transaction);
+
+      // 2. 签名并执行
+      const result = await signAndExecuteTransaction(
+        {
+          transaction,
+        }
+      );
+
+      console.log('Transaction result:', result);
+
+      // 3. 保存 Transaction Digest
+      setTxDigest(result.digest);
+
+      // 4. 显示成功消息
+      const explorerUrl = `https://suiscan.xyz/mainnet/tx/${result.digest}`;
+      alert(`✅ 交易成功！\n\nTransaction Digest:\n${result.digest}\n\n可以在 SuiScan 查看:\n${explorerUrl}`);
+
+    } catch (err) {
+      console.error('Transaction error:', err);
+      setError(err instanceof Error ? err.message : '执行交易失败');
+      alert(`❌ 交易失败：\n\n${err instanceof Error ? err.message : '未知错误'}`);
+    } finally {
+      setExecuting(false);
     }
   };
 
@@ -145,12 +197,17 @@ export default function Home() {
             自然语言 → 可验证的 Sui Transaction
           </p>
 
-          {/* Demo Notice */}
+          {/* Wallet Connection */}
           <div className="flex justify-center mb-4">
-            <div className="flex items-center gap-2 bg-blue-900/20 border border-blue-500/20 px-4 py-2 rounded-lg">
-              <Sparkles className="w-4 h-4 text-blue-400" />
-              <span className="text-blue-200 text-sm">
-                🎭 Demo 模式 - 展示 Intent 解析和 Transaction 构建能力
+            <WalletButton />
+          </div>
+
+          {/* Network Notice */}
+          <div className="flex justify-center mb-4">
+            <div className="flex items-center gap-2 bg-yellow-900/20 border border-yellow-500/20 px-4 py-2 rounded-lg">
+              <AlertTriangle className="w-4 h-4 text-yellow-400" />
+              <span className="text-yellow-200 text-sm">
+                ⚠️ 当前为 Mainnet - 交易会真实执行，请谨慎操作
               </span>
             </div>
           </div>
@@ -209,6 +266,13 @@ export default function Home() {
                 </button>
               ))}
             </div>
+
+            {!isConnected && (
+              <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-500/20 rounded-lg flex items-center gap-2 text-yellow-200 text-sm">
+                <AlertTriangle className="w-4 h-4" />
+                <span>⚠️ 请先连接钱包才能执行交易</span>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -285,7 +349,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* Transaction Display */}
+        {/* Transaction Display & Execution */}
         {txSummary && (
           <div className="p-6 bg-slate-800/50 border border-green-500/20 rounded-lg">
             <div className="flex items-center justify-between mb-4">
@@ -293,14 +357,35 @@ export default function Home() {
                 <Code className="w-5 h-5" />
                 构建的 Transaction
               </h3>
-              <Button
-                onClick={copyTransaction}
-                variant="outline"
-                className="border-slate-600 text-slate-300 hover:bg-slate-700 text-xs px-3 py-1 h-8"
-              >
-                <Copy className="w-4 h-4 mr-2" />
-                复制
-              </Button>
+              <div className="flex gap-2">
+                {isConnected && (
+                  <Button
+                    onClick={executeTransaction}
+                    disabled={executing}
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  >
+                    {executing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        执行中...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        签名并执行
+                      </>
+                    )}
+                  </Button>
+                )}
+                <Button
+                  onClick={copyTransaction}
+                  variant="outline"
+                  className="border-slate-600 text-slate-300 hover:bg-slate-700 text-xs px-3 py-1 h-8"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  复制
+                </Button>
+              </div>
             </div>
 
             {/* Transaction Info */}
@@ -316,7 +401,7 @@ export default function Home() {
             </div>
 
             {/* Transaction Data */}
-            <div className="p-4 bg-slate-900/50 border border-slate-600 rounded-lg">
+            <div className="p-4 bg-slate-900/50 border border-slate-600 rounded-lg mb-4">
               <div className="text-xs text-slate-400 mb-2">Serialized Transaction (Base64)</div>
               <textarea
                 readOnly
@@ -325,14 +410,46 @@ export default function Home() {
               />
             </div>
 
+            {/* Transaction Digest */}
+            {txDigest && (
+              <div className="p-4 bg-green-900/20 border border-green-500/20 rounded-lg mb-4">
+                <div className="text-sm text-green-200 mb-2">✅ 交易已提交到链上</div>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs text-green-300 font-mono flex-1 break-all">
+                    {txDigest}
+                  </code>
+                  <Button
+                    onClick={() => {
+                      navigator.clipboard.writeText(txDigest);
+                      alert('✅ 交易 Digest 已复制');
+                    }}
+                    variant="outline"
+                    className="text-xs px-2 py-1 h-6 border-green-500/20 text-green-300"
+                  >
+                    复制
+                  </Button>
+                </div>
+                <div className="mt-2">
+                  <a
+                    href={`https://suiscan.xyz/mainnet/tx/${txDigest}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-green-400 hover:text-green-300"
+                  >
+                    在 SuiScan 上查看 →
+                  </a>
+                </div>
+              </div>
+            )}
+
             {/* Info */}
-            <div className="mt-4 p-4 bg-blue-900/20 border border-blue-500/20 rounded-lg">
+            <div className="p-4 bg-blue-900/20 border border-blue-500/20 rounded-lg">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-200">
-                  <p className="font-medium mb-1">Demo 模式说明</p>
+                  <p className="font-medium mb-1">功能说明</p>
                   <p className="text-blue-300/80">
-                    此 Transaction 已成功构建并验证，包含以下功能：
+                    此 Transaction 包含以下功能：
                   </p>
                   <ul className="mt-2 space-y-1 text-xs text-blue-300/60">
                     <li>✅ 真实的 Kriya DEX Swap 集成（主网）</li>

@@ -1,0 +1,73 @@
+<svg width="512" height="512" viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!--
+    Logo for 'Otter - Sui Intent Composer'
+    Designed by an AI assistant.
+    - Otter Color: #F59E0B
+    - Sui Element Color: #4A90E2
+    - Style: Modern, Flat, Layered
+    -->
+    <defs>
+        <!-- Sui Hexagon Shape -->
+        <path id="hexagon" d="M 43.3 0 L 21.65 37.5 L -21.65 37.5 L -43.3 0 L -21.65 -37.5 L 21.65 -37.5 Z" />
+
+        <!-- Wave pattern for inside the hexagon -->
+        <path id="wave" d="M -35 5 C -15 -15, 15 15, 35 5" stroke-width="8" stroke-linecap="round" fill="none" />
+    </defs>
+
+    <!-- Group for Sui Elements -->
+    <g id="sui-elements" fill="#4A90E2">
+        <!-- Center Hexagon -->
+        <g transform="translate(256, 160)">
+            <use xlink:href="#hexagon" />
+            <use xlink:href="#wave" stroke="#81B2F3" />
+        </g>
+        <!-- Left Hexagon -->
+        <g transform="translate(170, 205) rotate(-20)">
+            <use xlink:href="#hexagon" />
+            <use xlink:href="#wave" stroke="#81B2F3" />
+        </g>
+        <!-- Right Hexagon -->
+        <g transform="translate(342, 205) rotate(20)">
+            <use xlink:href="#hexagon" />
+            <use xlink:href="#wave" stroke="#81B2F3" />
+        </g>
+    </g>
+
+    <!-- Group for the Otter -->
+    <g id="otter" transform="translate(0, 40)">
+        <!-- Tail -->
+        <path d="M 368 350 C 420 330, 450 280, 430 240 C 420 260, 380 310, 330 330 Z" fill="#D97706" />
+
+        <!-- Body -->
+        <path d="M 120 300 C 50 250, 80 180, 150 180 C 250 180, 350 220, 400 280 C 450 340, 380 400, 300 400 C 220 400, 180 340, 120 300 Z" fill="#F59E0B" />
+
+        <!-- Belly Patch -->
+        <path d="M 175 295 C 150 260, 180 220, 230 215 C 280 210, 320 240, 340 280 C 360 320, 330 360, 285 365 C 240 370, 200 330, 175 295 Z" fill="#FCD34D" />
+
+        <!-- Head Shadow -->
+        <path d="M 200 215 C 210 200, 240 190, 270 195 C 280 210, 260 225, 230 225 C 215 225, 200 220, 200 215 Z" fill="#D97706" opacity="0.5" />
+
+        <!-- Paws -->
+        <circle cx="220" cy="260" r="15" fill="#D97706" />
+        <circle cx="290" cy="250" r="15" fill="#D97706" />
+
+        <!-- Head -->
+        <g transform="translate(140, 140)">
+            <path d="M 50 80 C -10 80, -10 0, 50 0 C 110 0, 110 80, 50 80 Z" fill="#F59E0B" />
+            <!-- Muzzle -->
+            <path d="M 50 65 C 25 65, 25 35, 50 35 C 75 35, 75 65, 50 65 Z" fill="#FCD34D" />
+            <!-- Nose -->
+            <path d="M 50 42 C 45 42, 42 48, 50 48 C 58 48, 55 42, 50 42 Z" fill="#422006" />
+            <!-- Eyes -->
+            <circle cx="30" cy="30" r="5" fill="#422006" />
+            <circle cx="70" cy="30" r="5" fill="#422006" />
+            <!-- Whiskers -->
+            <g stroke="#A16207" stroke-width="1.5" stroke-linecap="round">
+                <path d="M 15 50 L 0 52" />
+                <path d="M 18 55 L 2 58" />
+                <path d="M 85 50 L 100 52" />
+                <path d="M 82 55 L 98 58" />
+            </g>
+        </g>
+    </g>
+</svg>

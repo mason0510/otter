@@ -1,6 +1,6 @@
-# Otter - AI Intent Composer for Sui
+# Sui Intent Agent - Verified PTB Composer
 
-> 🦦 **Smart as an Otter, Fast as Sui** | Vibe Sui Spring Fest 2026 | AI + Infra 赛道
+> 🚀 **Sui Vibe 黑客松项目** | AI + Infra 赛道
 
 ## 项目简介
 
@@ -354,9 +354,9 @@ open http://localhost:3000
 
 ## 团队
 
-- **开发者**: Mason (@mason1) | 11年区块链全栈工程师
-- **技术顾问**: Ben (@bencon9999)
-- **黑客松**: Vibe Sui Spring Fest 2026
+- **开发者**: [你的名字]
+- **AI 顾问**: Turing + Codex
+- **黑客松**: Sui Vibe 2026
 
 ---
 

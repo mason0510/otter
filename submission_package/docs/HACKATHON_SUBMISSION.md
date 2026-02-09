@@ -7,10 +7,10 @@
 ## 📋 基本信息（Basic Information）
 
 ### 项目名称
-**Otter - AI Intent Composer for Sui**
+**Sui Intent Agent - Verified PTB Composer**
 
 ### 一句话描述（30字以内）
-用自然语言一键执行 Sui 链上复杂交易，水獭帮你搞定 PTB 组合与执行
+用自然语言一键执行 Sui 链上复杂交易，AI 驱动的可验证 PTB 组合器
 
 ### 详细描述（200字以内）
 **核心创新**：自然语言 → 受限域意图 → Policy 校验 → 可验证的 PTB
@@ -32,9 +32,9 @@
 
 ### Logo / 项目图片
 **Logo 设计建议**：
-- 主色调：紫色（代表 AI）+ 蓝色（代表 Sui）+ 橙色（水獭活力）
-- 元素：水獭形象 + Sui 标志 + 对话气泡（代表自然语言理解）
-- 风格：简洁、现代、科技感 + 可爱亲和
+- 主色调：紫色（代表 AI）+ 蓝色（代表 Sui）
+- 元素：对话气泡 + 链接符号（代表自然语言 → 链上交易）
+- 风格：简洁、现代、科技感
 
 **Logo 文件位置**（需创建）：
 ```
@@ -106,7 +106,7 @@ npm run dev
 - 连接 Sui Wallet（Testnet）
 
 ### 3. Demo 视频（必需）
-**视频标题**: Otter - 3分钟 Demo - AI Intent Composer for Sui
+**视频标题**: Sui Intent Agent - 3分钟 Demo
 
 **录制清单**（参考 `demo_recording_guide.md`）：
 
@@ -210,10 +210,10 @@ npm run dev
 ```markdown
 ## Basic Information
 
-**Project Name**: Otter - AI Intent Composer for Sui
+**Project Name**: Sui Intent Agent
 
 **Description**:
-用自然语言一键执行 Sui 链上复杂交易。用户只需输入 "把 10 SUI 换成 USDT，然后转一半给 Alice"，系统自动解析意图、生成可验证的 PTB、展示人类可读的交易摘要，一次签名完成所有操作。水獭帮你搞定 Sui 上的复杂操作，充分利用 PTB 特性，降低使用门槛，提升交易安全性。
+用自然语言一键执行 Sui 链上复杂交易。用户只需输入 "把 10 SUI 换成 USDT，然后转一半给 Alice"，系统自动解析意图、生成可验证的 PTB、展示人类可读的交易摘要，一次签名完成所有操作。充分利用 Sui PTB 特性，降低使用门槛，提升交易安全性。
 
 **Track**: AI + Infra
 
@@ -230,7 +230,7 @@ npm run dev
 
 ## Links
 
-**GitHub**: https://github.com/mason1/otter
+**GitHub**: https://github.com/your-org/sui-intent-agent
 **Website**: http://82.29.54.80:3025
 **Demo Video**: https://youtube.com/watch?v=your-video-id
 

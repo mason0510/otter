@@ -2,7 +2,7 @@
  * 构建 Sui PTB Transaction
  */
 
-import { Transaction } from '@mysten/sui.js/transactions';
+import { Transaction } from '@mysten/sui/transactions';
 import type { Intent, SwapParams, SplitParams, TransferParams } from './types';
 
 /**

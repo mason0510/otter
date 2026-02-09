@@ -157,7 +157,7 @@ export default function Home() {
       setTxDigest(result.digest);
 
       // 4. 显示成功消息（根据钱包网络选择 Explorer）
-      const explorerUrl = `https://suiscan.xyz/testnet/tx/${result.digest}`;
+      const explorerUrl = `https://suiscan.xyz/mainnet/tx/${result.digest}`;
       alert(`✅ 交易成功！\n\nTransaction Digest:\n${result.digest}\n\n可以在 Sui Explorer 查看:\n${explorerUrl}`);
 
     } catch (err) {

@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Purple to Blue gradient (AI + Sui theme) -->
+    <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7C3AED;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#6366F1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Orange gradient for otter fur -->
+    <linearGradient id="otterGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F59E0B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D97706;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Soft glow effect -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background circle with gradient -->
+  <circle cx="256" cy="256" r="250" fill="url(#mainGradient)" opacity="0.08"/>
+
+  <!-- Otter character (simplified cute design) -->
+  <g transform="translate(180, 120)" filter="url(#glow)">
+    <!-- Otter head -->
+    <ellipse cx="80" cy="100" rx="70" ry="75" fill="url(#otterGradient)"/>
+
+    <!-- White belly patch -->
+    <ellipse cx="80" cy="120" rx="45" ry="50" fill="#FFF8DC" opacity="0.9"/>
+
+    <!-- Ears -->
+    <ellipse cx="50" cy="60" rx="15" ry="20" fill="url(#otterGradient)"/>
+    <ellipse cx="110" cy="60" rx="15" ry="20" fill="url(#otterGradient)"/>
+
+    <!-- Eyes (smart, friendly expression) -->
+    <ellipse cx="65" cy="90" rx="8" ry="12" fill="#2D3748"/>
+    <ellipse cx="95" cy="90" rx="8" ry="12" fill="#2D3748"/>
+    <!-- Eye sparkles (AI intelligence) -->
+    <circle cx="67" cy="88" r="3" fill="white"/>
+    <circle cx="97" cy="88" r="3" fill="white"/>
+
+    <!-- Nose -->
+    <ellipse cx="80" cy="110" rx="8" ry="6" fill="#2D3748"/>
+
+    <!-- Whiskers -->
+    <line x1="45" y1="105" x2="20" y2="100" stroke="#2D3748" stroke-width="2" opacity="0.6"/>
+    <line x1="45" y1="110" x2="20" y2="115" stroke="#2D3748" stroke-width="2" opacity="0.6"/>
+    <line x1="115" y1="105" x2="140" y2="100" stroke="#2D3748" stroke-width="2" opacity="0.6"/>
+    <line x1="115" y1="110" x2="140" y2="115" stroke="#2D3748" stroke-width="2" opacity="0.6"/>
+  </g>
+
+  <!-- Speech bubble (natural language interface) -->
+  <g transform="translate(50, 280)" filter="url(#glow)">
+    <path d="M 60 20
+             L 180 20
+             Q 200 20 200 40
+             L 200 100
+             Q 200 120 180 120
+             L 120 120
+             L 90 150
+             L 90 120
+             L 60 120
+             Q 40 120 40 100
+             L 40 40
+             Q 40 20 60 20 Z"
+          fill="url(#mainGradient)"
+          opacity="0.3"
+          stroke="url(#mainGradient)"
+          stroke-width="3"/>
+
+    <!-- Three dots (AI thinking) -->
+    <circle cx="80" cy="70" r="8" fill="url(#mainGradient)"/>
+    <circle cx="120" cy="70" r="8" fill="url(#mainGradient)"/>
+    <circle cx="160" cy="70" r="8" fill="url(#mainGradient)"/>
+  </g>
+
+  <!-- Water flow waves (Sui blockchain theme) -->
+  <g transform="translate(280, 200)" opacity="0.4">
+    <path d="M 0 0 Q 20 -10, 40 0 T 80 0" stroke="url(#mainGradient)" stroke-width="4" fill="none"/>
+    <path d="M 0 20 Q 20 10, 40 20 T 80 20" stroke="url(#mainGradient)" stroke-width="4" fill="none"/>
+    <path d="M 0 40 Q 20 30, 40 40 T 80 40" stroke="url(#mainGradient)" stroke-width="4" fill="none"/>
+  </g>
+
+  <!-- AI sparkles -->
+  <g opacity="0.5">
+    <circle cx="120" cy="120" r="4" fill="url(#mainGradient)"/>
+    <circle cx="380" cy="180" r="5" fill="url(#mainGradient)"/>
+    <circle cx="350" cy="380" r="4" fill="url(#mainGradient)"/>
+    <circle cx="140" cy="360" r="3" fill="url(#mainGradient)"/>
+  </g>
+
+  <!-- Text label: Otter -->
+  <text x="256" y="460"
+        text-anchor="middle"
+        font-family="system-ui, -apple-system, 'SF Pro Display', sans-serif"
+        font-size="48"
+        font-weight="700"
+        fill="url(#mainGradient)">
+    Otter
+  </text>
+
+  <!-- Subtitle -->
+  <text x="256" y="488"
+        text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="16"
+        font-weight="500"
+        fill="url(#mainGradient)"
+        opacity="0.7">
+    AI Intent Composer for Sui
+  </text>
+</svg>

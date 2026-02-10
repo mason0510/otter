@@ -414,18 +414,21 @@ export function buildAuthorizedSwap(
     throw new Error(`授权模式 Swap 当前仅支持 SUI 作为输入代币，不支持 ${inputToken}`);
   }
 
-  // 调用 Swap Wrapper 合约的 execute_swap_with_auth 函数
+  // 先从 gas 中 split 出指定金额的 Coin<SUI>
+  const [coin] = tx.splitCoins(tx.gas, [amount]);
+
+  // 调用 Swap Wrapper 合约的 execute_swap_with_auth_v2 函数（使用统一授权）
   tx.moveCall({
-    target: `${swapWrapperPackageId}::swap_wrapper::execute_swap_with_auth`,
+    target: `${swapWrapperPackageId}::swap_wrapper::execute_swap_with_auth_v2`,
     arguments: [
-      tx.object(authObjectId),           // Authorization (Shared Object)
-      tx.gas,                            // input_coin (从 gas object 拆分)
+      tx.object(authObjectId),           // auth::Authorization (Shared Object，统一授权对象)
+      coin,                              // input_coin (已 split 的 Coin<SUI>)
       tx.pure.u64(minOutput),            // min_output
       tx.object('0x6'),                  // Clock (Sui 系统对象)
     ],
   });
 
-  console.log(`[Authorized Swap] ✅ 授权 Swap 交易构建成功`);
+  console.log(`[Authorized Swap] ✅ 授权 Swap 交易构建成功（使用统一授权 v2）`);
 }
 
 // ============================================================================

@@ -118,8 +118,8 @@ export default function Home() {
       setIntents(data.intents);
 
       // 检测 Swap 组合操作
-      const hasSwap = data.intents.some(intent => intent.action === 'swap');
-      const hasOtherOps = data.intents.some(intent => intent.action !== 'swap');
+      const hasSwap = data.intents.some((intent: any) => intent.action === 'swap');
+      const hasOtherOps = data.intents.some((intent: any) => intent.action !== 'swap');
       if (hasSwap && hasOtherOps && data.intents.length > 1) {
         toast.warning('需要分步执行', {
           description: 'Swap 与其他操作需要分别执行。建议：先完成转账操作，然后单独执行 Swap。',

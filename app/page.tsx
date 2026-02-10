@@ -341,8 +341,10 @@ export default function Home() {
               <span className="text-xs text-slate-400">试试说：</span>
               {[
                 '把 0.001 SUI 换成 USDC，滑点 1%',
-                '转 0.001 SUI 给朋友',
+                '转 0.001 SUI 到 0x6c90dc192d728b32c20e34336137775bf632e51035d784dfea0df73c3aaba225',
                 '把我的 SUI 平均分成 3 份',
+                '转 0.001 SUI 到 0x6c90dc192d728b32c20e34336137775bf632e51035d784dfea0df73c3aaba225 然后把 0.001 SUI 换成 USDC',
+                '转 0.5 SUI 到 0x6c90dc192d728b32c20e34336137775bf632e51035d784dfea0df73c3aaba225',
               ].map((example, i) => (
                 <button
                   key={i}

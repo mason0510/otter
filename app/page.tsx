@@ -166,6 +166,18 @@ export default function Home() {
     setError(null);
 
     try {
+      // 检查操作是否支持授权模式
+      const supportsAuth = intents.length === 1 &&
+        (intents[0].action === 'transfer' || intents[0].action === 'swap');
+
+      // 如果操作支持授权模式但用户没有创建授权，给出提示
+      if (supportsAuth && !authObjectId) {
+        toast.info('建议创建授权', {
+          description: '此操作支持授权模式，可以设置限额保护。点击右上角"授权管理"创建授权。',
+          duration: 5000,
+        });
+      }
+
       // 检查是否可以使用授权模式
       let shouldUseAuth = useAuthMode && authObjectId;
       let shouldUseSwapAuth = false;

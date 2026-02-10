@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@cetusprotocol/sui-clmm-sdk": "^1.4.0",
     "@mysten/dapp-kit": "^0.20.0",
     "@mysten/sui": "^1.45.2",
     "@radix-ui/react-dialog": "^1.1.2",

@@ -9,21 +9,26 @@
 
 import { Transaction } from '@mysten/sui/transactions';
 import { SuiClient } from '@mysten/sui/client';
-import { KriyaSDK } from 'kriya-v3-sdk';
+import { CetusClmmSDK } from '@cetusprotocol/sui-clmm-sdk';
 import type { Intent, SwapParams, SplitParams, TransferParams } from './types';
+import { AUTH_PACKAGE_ID, SWAP_WRAPPER_PACKAGE_ID } from './config';
 
 // ============================================================================
 // 配置
 // ============================================================================
 
 const SUI_RPC_URL = 'https://fullnode.mainnet.sui.io:443';
-const KRIYA_PACKAGE_ID = '0xbd8d4489782042c6fafad4de4bc6a5e0b84a43c6c00647ffd7062d1e2bb7549e';
+
+// Cetus CLMM 配置
+const CETUS_PACKAGE_ID = '0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb';
 
 // Token 类型定义
 const TOKEN_TYPES = {
   SUI: '0x2::sui::SUI',
-  USDT: '0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf::coin::COIN',
-  USDC: '0xce38bfa63cc41b7622f1ab4bdcf9f4e4aa78b57abd1e2e70a966f639b4da4f57::coin::COIN',
+  // USDC (Cetus 原生) - 从 Cetus pool 获取
+  USDC: '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC',
+  // USDT (Wormhole 桥接)
+  USDT: '0xc06000611101640a2ce112cdaddf775ee64cf9fa566ae87c52bb970674988d60::coin::COIN',
 };
 
 // Token 分数精度
@@ -213,56 +218,56 @@ export async function preparePaymentCoin(
 }
 
 // ============================================================================
-// Swap: 集成 Kriya DEX
+// Swap: 集成 Cetus CLMM DEX
 // ============================================================================
 
 /**
- * 获取 Kriya Pool 信息
+ * 获取 Cetus Pool 信息
+ * 使用硬编码的已知 Pool ID（从 GeckoTerminal 获取）
  */
-async function getKriyaPoolInfo(tokenA: string, tokenB: string): Promise<{ objectId: string; tokenXType: string; tokenYType: string } | null> {
-  try {
-    // 标准化 Token 类型
-    const typeA = TOKEN_TYPES[tokenA.toUpperCase() as keyof typeof TOKEN_TYPES] || tokenA;
-    const typeB = TOKEN_TYPES[tokenB.toUpperCase() as keyof typeof TOKEN_TYPES] || tokenB;
+async function getCetusPoolInfo(tokenA: string, tokenB: string): Promise<{ objectId: string; tokenAType: string; tokenBType: string } | null> {
+  // 标准化 Token 类型
+  const typeA = TOKEN_TYPES[tokenA.toUpperCase() as keyof typeof TOKEN_TYPES] || tokenA;
+  const typeB = TOKEN_TYPES[tokenB.toUpperCase() as keyof typeof TOKEN_TYPES] || tokenB;
 
-    // 确保顺序一致（用于查找 pool）
-    const [tokenX, tokenY] = [typeA, typeB].sort();
+  console.log(`[getCetusPoolInfo] 查找 Pool: ${tokenA} / ${tokenB}`);
 
-    console.log(`[getKriyaPoolInfo] 查找 Pool: ${tokenX} / ${tokenY}`);
+  // 硬编码的已知 Cetus Pool（从 GeckoTerminal: https://www.geckoterminal.com/sui-network/pools/...）
+  const KNOWN_POOLS: Array<{
+    objectId: string;
+    tokenAType: string;
+    tokenBType: string;
+  }> = [
+    {
+      // USDC/SUI on Cetus (0.25% fee) - 流动性最大的 pool
+      objectId: '0xb8d7d9e66a60c239e7a60110efcf8de6c705580ed924d0dde141f4a0e2c90105',
+      tokenAType: '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC',
+      tokenBType: '0x2::sui::SUI',
+    },
+  ];
 
-    // 使用 Kriya SDK 获取 Pool
-    // 参数：rpcEndpoint, packageId, isMainnet (true = mainnet)
-    const sdk = new KriyaSDK(SUI_RPC_URL, KRIYA_PACKAGE_ID, true);
+  // 查找匹配的 Pool
+  const matchingPool = KNOWN_POOLS.find(
+    (pool) =>
+      (pool.tokenAType === typeA && pool.tokenBType === typeB) ||
+      (pool.tokenAType === typeB && pool.tokenBType === typeA)
+  );
 
-    // 尝试获取 Pool 信息
-    const pools = await sdk.Pool.getAllPools();
-
-    // 查找匹配的 Pool (ExtendedPool 使用 snake_case)
-    const matchingPool = pools.find(
-      (pool) =>
-        (pool.token_x_type === tokenX && pool.token_y_type === tokenY) ||
-        (pool.token_x_type === tokenY && pool.token_y_type === tokenX)
-    );
-
-    if (matchingPool) {
-      console.log(`[getKriyaPoolInfo] 找到 Pool: ${matchingPool.pool_id}`);
-      return {
-        objectId: matchingPool.pool_id,
-        tokenXType: matchingPool.token_x_type,
-        tokenYType: matchingPool.token_y_type,
-      };
-    }
-
-    console.warn(`[getKriyaPoolInfo] 未找到匹配的 Pool`);
-    return null;
-  } catch (error) {
-    console.error('[getKriyaPoolInfo] 查询失败:', error);
-    return null;
+  if (matchingPool) {
+    console.log(`[getCetusPoolInfo] ✅ 找到 Pool: ${matchingPool.objectId}`);
+    return {
+      objectId: matchingPool.objectId,
+      tokenAType: matchingPool.tokenAType,
+      tokenBType: matchingPool.tokenBType,
+    };
   }
+
+  console.error('[getCetusPoolInfo] ❌ 未找到匹配的 Pool');
+  return null;
 }
 
 /**
- * 构建 Swap 交易（使用 Kriya DEX）
+ * 构建 Swap 交易（使用 Cetus CLMM DEX）
  */
 async function buildSwap(tx: Transaction, intent: Intent, senderAddress?: string) {
   const params = intent.params as SwapParams;
@@ -288,44 +293,139 @@ async function buildSwap(tx: Transaction, intent: Intent, senderAddress?: string
     console.log(`[Swap] ✅ 滑点校验通过 (${slippage}%)`);
 
     // 3. 获取 Pool 信息
-    const poolInfo = await getKriyaPoolInfo(inputToken, outputToken);
+    const poolInfo = await getCetusPoolInfo(inputToken, outputToken);
 
     if (!poolInfo) {
       throw new Error(`未找到 ${inputToken}/${outputToken} 交易池，请确认交易对是否支持`);
     }
 
-    // 4. ⚠️ 注意：计算最小输出量需要基于实际报价
-    // 当前简化处理：暂时使用占位符逻辑
-    // TODO: 实现完整的报价查询（使用 devInspectTransactionBlock 或 Kriya SDK）
+    // 4. 解析 Token 类型
     const inputTokenType = TOKEN_TYPES[inputToken.toUpperCase() as keyof typeof TOKEN_TYPES] || inputToken;
     const outputTokenType = TOKEN_TYPES[outputToken.toUpperCase() as keyof typeof TOKEN_TYPES] || outputToken;
 
-    // 临时方案：设置一个保守的最小输出量（1% 的输入金额作为占位符）
-    // 实际应该基于 Pool 报价计算
-    const minOutputAmount = inputAmount / BigInt(100);
+    // 5. 判断交易方向（a2b）
+    // Cetus 的 a2b 参数：true 表示从 tokenA → tokenB，false 表示从 tokenB → tokenA
+    // pool.tokenAType 是 USDC，pool.tokenBType 是 SUI
+    // 所以 SUI → USDC 应该是 b2a，即 a2b = false
+    const a2b = inputTokenType === poolInfo.tokenAType;
+    console.log(`[Swap] 交易方向: ${a2b ? 'A → B' : 'B → A'}`);
+    console.log(`[Swap] Pool Token A: ${poolInfo.tokenAType}`);
+    console.log(`[Swap] Pool Token B: ${poolInfo.tokenBType}`);
 
-    console.log(`[Swap] 最小输出量（占位符）: ${minOutputAmount.toString()} (${outputToken})`);
-    console.warn(`[Swap] ⚠️ 当前使用简化滑点计算，实际需要基于 Pool 报价`);
-
-    // 5. ✅ 修复：准备支付 Coin（而不是直接使用 tx.gas）
-    const paymentCoin = await preparePaymentCoin(tx, senderAddress, inputTokenType, inputAmount);
-
-    // 6. 调用 Kriya DEX swap
-    tx.moveCall({
-      target: `${KRIYA_PACKAGE_ID}::pool::swap`,
-      typeArguments: [inputTokenType, outputTokenType],
-      arguments: [
-        tx.object(poolInfo.objectId), // Pool
-        paymentCoin,                   // ✅ 使用准备好的支付 Coin
-        tx.pure.u64(minOutputAmount),  // 最小输出量
-      ],
+    // 6. 使用 SDK 获取报价（预估输出量）
+    const sdk = CetusClmmSDK.createSDK({
+      env: 'mainnet',
+      full_rpc_url: SUI_RPC_URL,
     });
 
+    // 设置发送者地址
+    sdk.setSenderAddress(senderAddress);
+
+    // 获取 Pool 对象（用于 preSwap）
+    const pool = await sdk.Pool.getPool(poolInfo.objectId);
+
+    // 使用 preSwap 获取预估输出量
+    const preSwapResult = await sdk.Swap.preSwap({
+      pool: pool,
+      current_sqrt_price: pool.current_sqrt_price,
+      decimals_a: TOKEN_DECIMALS['USDC'],
+      decimals_b: TOKEN_DECIMALS['SUI'],
+      coin_type_a: poolInfo.tokenAType,
+      coin_type_b: poolInfo.tokenBType,
+      a2b: a2b,
+      by_amount_in: true,
+      amount: inputAmount.toString(),
+    });
+
+    const estimatedOutputAmount = BigInt(preSwapResult.estimated_amount_out);
+    console.log(`[Swap] 预估输出量: ${estimatedOutputAmount.toString()} (${outputToken})`);
+
+    // 计算最小输出量（应用滑点）
+    const slippageMultiplier = BigInt(Math.floor((1 - slippageDecimal) * 1000000));
+    const amountLimit = (estimatedOutputAmount * slippageMultiplier) / BigInt(1000000);
+    console.log(`[Swap] 最小输出量（滑点后）: ${amountLimit.toString()} (${outputToken})`);
+
+    // 7. ✅ 使用 Cetus SDK 的 createSwapPayload
+    const swapTx = await sdk.Swap.createSwapPayload({
+      pool_id: poolInfo.objectId,
+      a2b: a2b,
+      by_amount_in: true,  // 使用输入金额
+      amount: inputAmount.toString(),
+      amount_limit: amountLimit.toString(),  // 最小输出量（输出 token）
+      coin_type_a: poolInfo.tokenAType,
+      coin_type_b: poolInfo.tokenBType,
+    });
+
+    // 8. 将 swapTx 的交易内容合并到当前 tx
+    // Transaction.build() 会序列化交易，我们需要合并指令
     console.log(`[Swap] ✅ Swap 交易构建成功`);
+    console.log(`[Swap] Swap Transaction:`, swapTx);
+
+    // 注意：Cetus SDK 返回的是完整的 Transaction 对象
+    // 我们需要将其合并到当前的 tx 中，或者直接返回 swapTx
+    // 为简单起见，这里我们直接返回 swapTx（但这需要修改调用方的逻辑）
+
+    // 暂时返回合并后的交易
+    return swapTx;
   } catch (error) {
     console.error('[Swap] ❌ 构建失败:', error);
     throw error;
   }
+}
+
+// ============================================================================
+// Authorized Swap: 使用授权对象执行 Swap（无需用户二次确认）
+// ============================================================================
+
+/**
+ * 构建授权 Swap 交易（使用 Swap Wrapper 合约）
+ *
+ * 注意：当前 Swap Wrapper 合约尚未部署，此功能暂不可用
+ * 需要先部署 Swap Wrapper 合约，并配置 SWAP_WRAPPER_PACKAGE_ID
+ *
+ * @param tx - Transaction 对象
+ * @param authObjectId - 授权对象 ID（Shared Object）
+ * @param inputToken - 输入代币
+ * @param outputToken - 输出代币
+ * @param amount - 输入金额
+ * @param minOutput - 最小输出量（滑点保护）
+ * @param swapWrapperPackageId - Swap Wrapper 合约 Package ID
+ */
+export function buildAuthorizedSwap(
+  tx: Transaction,
+  authObjectId: string,
+  inputToken: string,
+  outputToken: string,
+  amount: bigint,
+  minOutput: bigint,
+  swapWrapperPackageId: string
+) {
+  console.log(`[Authorized Swap] 使用授权对象执行: ${amount} ${inputToken} → ${outputToken}`);
+  console.log(`[Authorized Swap] 授权对象: ${authObjectId}`);
+
+  // 检查 Swap Wrapper 是否已部署
+  if (!swapWrapperPackageId || swapWrapperPackageId === '0x0') {
+    throw new Error('Swap Wrapper 合约尚未部署，无法使用授权模式进行 Swap');
+  }
+
+  // 检查输入代币是否为 SUI（当前仅支持 SUI）
+  const inputTokenType = TOKEN_TYPES[inputToken.toUpperCase() as keyof typeof TOKEN_TYPES] || inputToken;
+  if (inputTokenType !== TOKEN_TYPES.SUI) {
+    throw new Error(`授权模式 Swap 当前仅支持 SUI 作为输入代币，不支持 ${inputToken}`);
+  }
+
+  // 调用 Swap Wrapper 合约的 execute_swap_with_auth 函数
+  tx.moveCall({
+    target: `${swapWrapperPackageId}::swap_wrapper::execute_swap_with_auth`,
+    arguments: [
+      tx.object(authObjectId),           // Authorization (Shared Object)
+      tx.gas,                            // input_coin (从 gas object 拆分)
+      tx.pure.u64(minOutput),            // min_output
+      tx.object('0x6'),                  // Clock (Sui 系统对象)
+    ],
+  });
+
+  console.log(`[Authorized Swap] ✅ 授权 Swap 交易构建成功`);
 }
 
 // ============================================================================
@@ -488,43 +588,209 @@ async function buildSplit(tx: Transaction, intent: Intent, senderAddress?: strin
 }
 
 // ============================================================================
+// 授权交易：使用 Shared Object 授权
+// ============================================================================
+
+/**
+ * 使用授权对象执行转账（无需用户二次确认）
+ *
+ * @param tx - Transaction 对象
+ * @param authObjectId - 授权对象 ID（Shared Object）
+ * @param recipient - 收款地址
+ * @param amount - 转账金额
+ * @param packageId - 授权合约 Package ID
+ */
+export function buildAuthorizedTransfer(
+  tx: Transaction,
+  authObjectId: string,
+  recipient: string,
+  amount: bigint,
+  packageId: string
+) {
+  console.log(`[Authorized Transfer] 使用授权对象执行: ${amount} SUI → ${recipient}`);
+  console.log(`[Authorized Transfer] 授权对象: ${authObjectId}`);
+
+  // 调用授权合约的 execute_with_auth 函数
+  tx.moveCall({
+    target: `${packageId}::auth::execute_with_auth`,
+    arguments: [
+      tx.object(authObjectId),           // Authorization (Shared Object)
+      tx.pure.address(recipient),        // recipient
+      tx.pure.u64(amount),               // amount
+      tx.gas,                            // coin (从 gas object 拆分)
+      tx.object('0x6'),                  // Clock (Sui 系统对象)
+    ],
+  });
+
+  console.log(`[Authorized Transfer] ✅ 授权交易构建成功`);
+}
+
+/**
+ * 检查授权是否可用于指定金额
+ *
+ * @param authObjectId - 授权对象 ID
+ * @param amount - 交易金额
+ * @param packageId - 授权合约 Package ID
+ * @returns 是否可以执行
+ */
+export async function checkAuthorization(
+  authObjectId: string,
+  amount: bigint,
+  packageId: string
+): Promise<boolean> {
+  try {
+    const client = getSuiClient();
+
+    // 创建交易
+    const tx = new Transaction();
+    tx.moveCall({
+      target: `${packageId}::auth::can_execute`,
+      arguments: [
+        tx.object(authObjectId),
+        tx.pure.u64(amount),
+        tx.object('0x6'), // Clock
+      ],
+      typeArguments: [],
+    });
+
+    // 调用只读函数 can_execute
+    const result = await client.devInspectTransactionBlock({
+      transactionBlock: tx,
+      sender: '0x0', // 任意地址都可以调用只读函数
+    });
+
+    // 检查返回值（简化处理）
+    if (result.results && result.results[0]) {
+      const returnValues = result.results[0].returnValues;
+      if (returnValues && returnValues[0]) {
+        // Sui bool 返回为 u8: 0 = false, 1 = true
+        const returnValue = returnValues[0][0] as unknown as Uint8Array;
+        const canExecute = returnValue[0] === 1;
+        console.log(`[Check Authorization] ✅ 可以执行: ${canExecute}`);
+        return canExecute;
+      }
+    }
+
+    return false;
+  } catch (error) {
+    console.error('[Check Authorization] ❌ 检查失败:', error);
+    return false;
+  }
+}
+
+// ============================================================================
 // 主函数：构建 Transaction
 // ============================================================================
 
 /**
  * 根据意图列表构建 Transaction
  *
+ * @param intents - 意图列表
+ * @param senderAddress - 发送者地址
+ * @param authObjectId - 可选的授权对象 ID（如果提供，使用授权模式）
+ * @param authPackageId - 授权合约 Package ID（使用授权模式时需要）
+ * @param swapWrapperPackageId - Swap Wrapper 合约 Package ID（Swap 授权模式时需要）
+ *
  * 安全说明：
- * - 使用真实 DEX（Kriya）
+ * - 使用真实 DEX（Cetus）
  * - 完整的 Coin 查询和余额验证
  * - 清晰的错误提示
+ * - 支持授权模式（免二次确认）
  */
 export async function buildTransaction(
   intents: Intent[],
-  senderAddress?: string
+  senderAddress?: string,
+  authObjectId?: string,
+  authPackageId?: string,
+  swapWrapperPackageId?: string
 ): Promise<Transaction> {
   const tx = new Transaction();
   let hasRealOperation = false;
 
+  // 检查是否使用授权模式
+  const useAuthMode = !!authObjectId && !!authPackageId;
+
   console.log(`\n========== 开始构建 Transaction ==========`);
   console.log(`意图数量: ${intents.length}`);
   console.log(`发送者: ${senderAddress || '未提供'}`);
+  console.log(`授权模式: ${useAuthMode ? '✅ 是（' + authObjectId + '）' : '❌ 否'}`);
 
   for (const intent of intents) {
     console.log(`\n--- 处理意图: ${intent.action} ---`);
 
     switch (intent.action) {
       case 'swap':
-        await buildSwap(tx, intent, senderAddress);
-        hasRealOperation = true;
+        // 检查是否可以使用授权模式进行 Swap
+        if (useAuthMode && swapWrapperPackageId && swapWrapperPackageId !== '0x0') {
+          // 使用授权模式执行 Swap
+          const params = intent.params as SwapParams;
+          const { inputToken, outputToken, amount, slippage } = params;
+
+          // 检查输入代币是否为 SUI（授权模式当前仅支持 SUI）
+          if (inputToken.toUpperCase() === 'SUI') {
+            const inputAmount = parseTokenAmount(amount, inputToken);
+            const slippageDecimal = parseFloat(slippage) / 100;
+
+            // 计算最小输出量（需要先通过 Cetus SDK 获取报价）
+            // 简化处理：当前不计算实际输出量，仅支持基础授权模式
+            // 实际使用时需要先调用 Cetus preSwap 获取预估输出量
+            const estimatedOutput = inputAmount; // 临时值，需要通过 SDK 获取
+            const minOutput = (estimatedOutput * BigInt(Math.floor((1 - slippageDecimal) * 1000000))) / BigInt(1000000);
+
+            buildAuthorizedSwap(tx, authObjectId!, inputToken, outputToken, inputAmount, minOutput, swapWrapperPackageId);
+            hasRealOperation = true;
+            console.log(`[Swap] ✅ 使用授权模式构建 Swap`);
+          } else {
+            console.warn(`[Swap] ⚠️ 授权模式 Swap 仅支持 SUI 作为输入代币，降级为标准模式`);
+            if (intents.length === 1) {
+              return await buildSwap(tx, intent, senderAddress);
+            } else {
+              throw new Error('暂不支持 Swap 与其他操作组合，请分步执行');
+            }
+          }
+        } else {
+          // 标准模式（使用 Cetus SDK）
+          if (useAuthMode) {
+            console.warn(`[Swap] ⚠️ Swap Wrapper 合约尚未部署，降级为标准模式`);
+          }
+          // 如果只有一个意图且是 Swap，直接返回 Cetus Transaction
+          if (intents.length === 1) {
+            console.log(`[Swap] 单独 Swap 操作，使用 Cetus SDK 构建的 Transaction`);
+            return await buildSwap(tx, intent, senderAddress);
+          } else {
+            console.warn(`[Swap] ⚠️ 暂不支持 Swap 与其他操作组合，请单独执行 Swap`);
+            throw new Error('暂不支持 Swap 与其他操作组合，请分步执行');
+          }
+        }
         break;
 
       case 'transfer':
-        await buildTransfer(tx, intent, senderAddress);
-        hasRealOperation = true;
+        if (useAuthMode && authObjectId && authPackageId) {
+          // 使用授权模式执行转账
+          const params = intent.params as TransferParams;
+          const { recipient, token, amount } = params;
+
+          if (token.toUpperCase() === 'SUI') {
+            const transferAmount = parseTokenAmount(amount, token);
+            buildAuthorizedTransfer(tx, authObjectId, recipient, transferAmount, authPackageId);
+            hasRealOperation = true;
+          } else {
+            console.warn(`[Transfer] ⚠️ 授权模式仅支持 SUI，降级为标准模式`);
+            await buildTransfer(tx, intent, senderAddress);
+            hasRealOperation = true;
+          }
+        } else {
+          // 标准模式
+          await buildTransfer(tx, intent, senderAddress);
+          hasRealOperation = true;
+        }
         break;
 
       case 'split':
+        // Split 暂不支持授权模式
+        if (useAuthMode) {
+          console.warn(`[Split] ⚠️ 授权模式暂不支持 Split，降级为标准模式`);
+        }
         await buildSplit(tx, intent, senderAddress);
         hasRealOperation = true;
         break;

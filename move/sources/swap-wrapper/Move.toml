@@ -1,0 +1,6 @@
+[package]
+name = "swap_wrapper"
+version = "0.0.1"
+
+[addresses]
+swap_wrapper = "0x0"

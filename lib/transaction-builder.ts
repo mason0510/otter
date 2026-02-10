@@ -610,6 +610,9 @@ export function buildAuthorizedTransfer(
   console.log(`[Authorized Transfer] 使用授权对象执行: ${amount} SUI → ${recipient}`);
   console.log(`[Authorized Transfer] 授权对象: ${authObjectId}`);
 
+  // 先从 gas coin 中 split 出精确金额
+  const [coin] = tx.splitCoins(tx.gas, [amount]);
+
   // 调用授权合约的 execute_with_auth 函数
   tx.moveCall({
     target: `${packageId}::auth::execute_with_auth`,
@@ -617,7 +620,7 @@ export function buildAuthorizedTransfer(
       tx.object(authObjectId),           // Authorization (Shared Object)
       tx.pure.address(recipient),        // recipient
       tx.pure.u64(amount),               // amount
-      tx.gas,                            // coin (从 gas object 拆分)
+      coin,                              // coin (已 split 的精确金额)
       tx.object('0x6'),                  // Clock (Sui 系统对象)
     ],
   });

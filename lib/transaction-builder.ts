@@ -751,7 +751,7 @@ export async function buildTransaction(
             if (intents.length === 1) {
               return await buildSwap(tx, intent, senderAddress);
             } else {
-              throw new Error('暂不支持 Swap 与其他操作组合，请分步执行');
+              throw new Error('Swap 与其他操作需要分步执行。请先执行 Transfer，完成后再单独执行 Swap');
             }
           }
         } else {
@@ -765,7 +765,7 @@ export async function buildTransaction(
             return await buildSwap(tx, intent, senderAddress);
           } else {
             console.warn(`[Swap] ⚠️ 暂不支持 Swap 与其他操作组合，请单独执行 Swap`);
-            throw new Error('暂不支持 Swap 与其他操作组合，请分步执行');
+            throw new Error('Swap 与其他操作需要分步执行。请先执行 Transfer，完成后再单独执行 Swap');
           }
         }
         break;

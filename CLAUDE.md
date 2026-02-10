@@ -35,7 +35,8 @@ upgrade-capability = "0x5b6445cbb5b1d454d8a8854d2231ad027f48706a24fc71d509f1f96f
 
 - **生产环境**：http://82.29.54.80:3025
 - **域名**：https://otter.tap365.org
-- **部署路径**：`/root/sui-intent-agent`
+- **部署路径**：`~/sui-intent-agent`（实际路径：`/home/admin/sui-intent-agent`）
+- **SSH 用户**：`admin`（使用 `ssh mason-main` 连接）
 
 ---
 
@@ -315,29 +316,46 @@ localStorage.removeItem('otter_auth_object_id');
 
 ```bash
 # Docker 容器日志
-ssh root@82.29.54.80
-docker logs sui-intent-agent -f --tail 100
+ssh mason-main
+sudo docker logs sui-intent-agent -f --tail 100
 
 # Nginx 访问日志
-tail -f /var/log/nginx/access.log
+sudo tail -f /var/log/nginx/access.log
 ```
 
 ### 重启服务
 
 ```bash
-ssh root@82.29.54.80
-docker restart sui-intent-agent
+ssh mason-main
+sudo docker restart sui-intent-agent
+```
+
+### 完整部署流程
+
+```bash
+# 1. 本地提交代码
+git add -A
+git commit -m "描述修改内容"
+git push
+
+# 2. 服务器部署
+ssh mason-main "cd ~/sui-intent-agent && git pull && sudo docker build -t sui-intent-agent . && sudo docker stop sui-intent-agent && sudo docker rm sui-intent-agent && sudo docker run -d --name sui-intent-agent -p 3025:3000 --restart unless-stopped sui-intent-agent"
+
+# 3. 验证部署
+ssh mason-main "sudo docker ps | grep sui-intent-agent"
+ssh mason-main "sudo docker logs sui-intent-agent --tail 20"
 ```
 
 ### 紧急回滚
 
 ```bash
-ssh root@82.29.54.80
-cd /root/sui-intent-agent
+ssh mason-main
+cd ~/sui-intent-agent
 git log --oneline -5  # 查看最近 5 次提交
 git reset --hard <commit-id>
-docker build -t sui-intent-agent .
-docker restart sui-intent-agent
+sudo docker build -t sui-intent-agent .
+sudo docker stop sui-intent-agent && sudo docker rm sui-intent-agent
+sudo docker run -d --name sui-intent-agent -p 3025:3000 --restart unless-stopped sui-intent-agent
 ```
 
 ---

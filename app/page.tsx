@@ -181,14 +181,9 @@ export default function Home() {
           shouldUseAuth = false;
           console.log('[Auth Mode] 检测到不支持授权的操作，降级为标准模式');
         } else if (intents.length === 1 && intents[0].action === 'swap') {
-          // 单个 Swap 操作，检查 Swap Wrapper 是否已部署
-          if (SWAP_WRAPPER_PACKAGE_ID && SWAP_WRAPPER_PACKAGE_ID !== '0x0') {
-            shouldUseSwapAuth = true;
-            console.log('[Auth Mode] ✅ Swap 支持授权模式（Swap Wrapper 已部署）');
-          } else {
-            shouldUseAuth = false;
-            console.log('[Auth Mode] ⚠️ Swap Wrapper 未部署，Swap 降级为标准模式');
-          }
+          // 单个 Swap 操作，使用 Swap Wrapper 授权模式
+          shouldUseSwapAuth = true;
+          console.log('[Auth Mode] ✅ Swap 支持授权模式（Swap Wrapper 已部署）');
         } else if (intents.length > 1) {
           // 多个操作组合暂不支持授权模式
           shouldUseAuth = false;
@@ -485,7 +480,7 @@ export default function Home() {
                       <div className="text-xs text-green-300">授权模式</div>
                       <div className="text-xs text-green-400">
                         此交易将使用授权对象执行，无需重复签名
-                        {txSummary.intents[0].action === 'swap' && SWAP_WRAPPER_PACKAGE_ID && SWAP_WRAPPER_PACKAGE_ID !== '0x0' && '（Swap Wrapper 已部署）'}
+                        {txSummary.intents[0].action === 'swap' && '（Swap Wrapper 已部署）'}
                       </div>
                     </div>
                   </div>

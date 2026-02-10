@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import '@mysten/dapp-kit/dist/index.css';
 import { Providers } from '@/components/Providers';
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
   title: "Otter - Sui Intent Composer",
@@ -24,6 +25,7 @@ export default function RootLayout({
         <Providers>
           {children}
         </Providers>
+        <Toaster position="top-center" richColors duration={3000} />
       </body>
     </html>
   );

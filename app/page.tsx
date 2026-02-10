@@ -16,6 +16,7 @@ import WalletButton, { useWalletConnection } from '@/components/WalletButton';
 import { getSavedAuthObjectId, saveAuthObjectId, clearAuthObjectId } from '@/lib/authorization';
 import { AUTH_PACKAGE_ID, SWAP_WRAPPER_PACKAGE_ID } from '@/lib/config';
 import type { Intent } from '@/lib/types';
+import { toast } from 'sonner';
 
 // 思考步骤类型
 type ThinkingStep = {
@@ -218,12 +219,21 @@ export default function Home() {
       // 4. 显示成功消息
       const explorerUrl = `https://suiscan.xyz/mainnet/tx/${result.digest}`;
       const modeText = shouldUseAuth ? '（授权模式）' : '';
-      alert(`✅ 交易成功！${modeText}\n\nTransaction Digest:\n${result.digest}\n\n可以在 SuiScan 查看:\n${explorerUrl}`);
+      toast.success(`交易成功！${modeText}`, {
+        description: `可以在 SuiScan 查看交易详情`,
+        action: {
+          label: '查看',
+          onClick: () => window.open(explorerUrl, '_blank')
+        },
+      });
 
     } catch (err) {
       console.error('Transaction error:', err);
-      setError(err instanceof Error ? err.message : '执行交易失败');
-      alert(`❌ 交易失败：\n\n${err instanceof Error ? err.message : '未知错误'}`);
+      const errorMsg = err instanceof Error ? err.message : '执行交易失败';
+      setError(errorMsg);
+      toast.error('交易失败', {
+        description: errorMsg,
+      });
     } finally {
       setExecuting(false);
     }
@@ -233,7 +243,9 @@ export default function Home() {
   const copyTransaction = () => {
     if (!txSummary) return;
     navigator.clipboard.writeText(txSummary.txData);
-    alert('✅ Transaction 数据已复制到剪贴板');
+    toast.success('复制成功', {
+      description: 'Transaction 数据已复制到剪贴板',
+    });
   };
 
   return (
@@ -510,7 +522,9 @@ export default function Home() {
                   <Button
                     onClick={() => {
                       navigator.clipboard.writeText(txDigest);
-                      alert('交易 Digest 已复制');
+                      toast.success('复制成功', {
+                        description: '交易 Digest 已复制到剪贴板',
+                      });
                     }}
                     variant="outline"
                     className="text-xs px-2 py-1 h-6 border-green-500/20 text-green-300"

@@ -30,6 +30,7 @@ type TxSummary = {
   intents: Intent[];
   txData: string;
   gasEstimate: string;
+  cardId?: string; // 用于区分多个交易卡片
 };
 
 export default function Home() {
@@ -39,10 +40,11 @@ export default function Home() {
   const [intents, setIntents] = useState<Intent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([]);
-  const [txSummary, setTxSummary] = useState<TxSummary | null>(null);
+  const [txSummaries, setTxSummaries] = useState<TxSummary[]>([]); // 改为数组支持多个交易
   const [txDigest, setTxDigest] = useState<string | null>(null);
   const [authObjectId, setAuthObjectId] = useState<string | null>(null);
   const [useAuthMode, setUseAuthMode] = useState(false);
+  const [executingCardId, setExecutingCardId] = useState<string | null>(null); // 当前执行的卡片
 
   // 钱包连接
   const { isConnected, address, signAndExecuteTransaction } = useWalletConnection();
@@ -76,7 +78,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setIntents([]);
-    setTxSummary(null);
+    setTxSummaries([]); // 清空交易卡片数组
     setTxDigest(null);
 
     // 初始化思考步骤
@@ -120,10 +122,12 @@ export default function Home() {
       // 检测 Swap 组合操作
       const hasSwap = data.intents.some((intent: any) => intent.action === 'swap');
       const hasOtherOps = data.intents.some((intent: any) => intent.action !== 'swap');
-      if (hasSwap && hasOtherOps && data.intents.length > 1) {
-        toast.warning('需要分步执行', {
-          description: 'Swap 与其他操作需要分别执行。建议：先完成转账操作，然后单独执行 Swap。',
-          duration: 7000,
+      const shouldSplit = hasSwap && hasOtherOps && data.intents.length > 1;
+
+      if (shouldSplit) {
+        toast.info('已自动拆分操作', {
+          description: '检测到组合操作，已拆分成独立的交易卡片，可分别执行。',
+          duration: 5000,
         });
       }
 
@@ -131,9 +135,33 @@ export default function Home() {
       updateStep('3', 'thinking');
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // 构建时传入 address（从已连接的钱包获取）
-      const transaction = await buildTransaction(data.intents, address);
-      const txData = transaction.serialize();
+      // 根据是否需要拆分，构建单个或多个交易
+      const summaries: TxSummary[] = [];
+
+      if (shouldSplit) {
+        // 拆分模式：为每个 intent 单独构建交易
+        for (let i = 0; i < data.intents.length; i++) {
+          const intent = data.intents[i];
+          const transaction = await buildTransaction([intent], address);
+          const txData = transaction.serialize();
+          summaries.push({
+            intents: [intent],
+            txData,
+            gasEstimate: '0.01 SUI',
+            cardId: `card-${i}`,
+          });
+        }
+      } else {
+        // 合并模式：所有 intents 构建成一个交易
+        const transaction = await buildTransaction(data.intents, address);
+        const txData = transaction.serialize();
+        summaries.push({
+          intents: data.intents,
+          txData,
+          gasEstimate: '0.01 SUI',
+          cardId: 'card-0',
+        });
+      }
 
       updateStep('3', 'done');
 
@@ -142,11 +170,7 @@ export default function Home() {
       await new Promise(resolve => setTimeout(resolve, 300));
       updateStep('4', 'done');
 
-      setTxSummary({
-        intents: data.intents,
-        txData,
-        gasEstimate: '0.01 SUI',
-      });
+      setTxSummaries(summaries);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : '未知错误');
@@ -155,8 +179,8 @@ export default function Home() {
     }
   };
 
-  // 执行交易
-  const executeTransaction = async () => {
+  // 执行交易（支持多卡片模式）
+  const executeTransaction = async (cardId?: string) => {
     if (!isConnected) {
       setError('请先连接钱包');
       return;
@@ -172,13 +196,27 @@ export default function Home() {
       return;
     }
 
+    // 找到对应的交易卡片
+    const targetCard = cardId
+      ? txSummaries.find(s => s.cardId === cardId)
+      : txSummaries[0];
+
+    if (!targetCard) {
+      setError('未找到对应的交易');
+      return;
+    }
+
     setExecuting(true);
+    setExecutingCardId(cardId || null);
     setError(null);
 
     try {
+      // 使用当前卡片的 intents
+      const cardIntents = targetCard.intents;
+
       // 检查操作是否支持授权模式
-      const supportsAuth = intents.length === 1 &&
-        (intents[0].action === 'transfer' || intents[0].action === 'swap');
+      const supportsAuth = cardIntents.length === 1 &&
+        (cardIntents[0].action === 'transfer' || cardIntents[0].action === 'swap');
 
       // 如果操作支持授权模式但用户没有创建授权，给出提示
       if (supportsAuth && !authObjectId) {
@@ -195,7 +233,7 @@ export default function Home() {
       // 如果启用授权模式，检查操作类型
       if (shouldUseAuth) {
         // 检查是否所有操作都支持授权模式
-        const hasUnsupported = intents.some(intent =>
+        const hasUnsupported = cardIntents.some(intent =>
           intent.action !== 'transfer' && intent.action !== 'swap'
         );
 
@@ -203,11 +241,11 @@ export default function Home() {
           // 如果有不支持的操作，无法使用授权模式
           shouldUseAuth = false;
           console.log('[Auth Mode] 检测到不支持授权的操作，降级为标准模式');
-        } else if (intents.length === 1 && intents[0].action === 'swap') {
+        } else if (cardIntents.length === 1 && cardIntents[0].action === 'swap') {
           // 单个 Swap 操作，使用 Swap Wrapper 授权模式
           shouldUseSwapAuth = true;
           console.log('[Auth Mode] ✅ Swap 支持授权模式（Swap Wrapper 已部署）');
-        } else if (intents.length > 1) {
+        } else if (cardIntents.length > 1) {
           // 多个操作组合暂不支持授权模式
           shouldUseAuth = false;
           console.log('[Auth Mode] 检测到多操作组合，降级为标准模式');
@@ -216,7 +254,7 @@ export default function Home() {
 
       // 1. 构建 Transaction
       const transaction = await buildTransaction(
-        intents,
+        cardIntents,
         address,
         shouldUseAuth && authObjectId ? authObjectId : undefined,
         shouldUseAuth ? AUTH_PACKAGE_ID : undefined,
@@ -258,13 +296,18 @@ export default function Home() {
       });
     } finally {
       setExecuting(false);
+      setExecutingCardId(null);
     }
   };
 
   // 复制 Transaction 数据
-  const copyTransaction = () => {
-    if (!txSummary) return;
-    navigator.clipboard.writeText(txSummary.txData);
+  const copyTransaction = (cardId?: string) => {
+    const targetCard = cardId
+      ? txSummaries.find(s => s.cardId === cardId)
+      : txSummaries[0];
+
+    if (!targetCard) return;
+    navigator.clipboard.writeText(targetCard.txData);
     toast.success('复制成功', {
       description: 'Transaction 数据已复制到剪贴板',
     });
@@ -461,83 +504,110 @@ export default function Home() {
           </div>
         )}
 
-        {/* Transaction Display & Execution */}
-        {txSummary && (
-          <div className="p-6 bg-slate-800/50 border border-green-500/20 rounded-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Code className="w-5 h-5" />
-                构建的 Transaction
-              </h3>
-              <div className="flex gap-2">
-                {isConnected && (
-                  <Button
-                    onClick={executeTransaction}
-                    disabled={executing}
-                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-                  >
-                    {executing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        执行中...
-                      </>
-                    ) : (
-                      '确认并签名'
-                    )}
-                  </Button>
-                )}
-                <Button
-                  onClick={copyTransaction}
-                  variant="outline"
-                  className="border-slate-600 text-slate-300 hover:bg-slate-700 text-xs px-3 py-1 h-8"
-                >
-                  <Copy className="w-4 h-4 mr-2" />
-                  复制
-                </Button>
-              </div>
-            </div>
+        {/* Transaction Cards - Support Multiple Independent Transactions */}
+        {txSummaries.length > 0 && (
+          <div className="space-y-6">
+            {txSummaries.map((summary) => {
+              const isCurrentlyExecuting = executing && executingCardId === summary.cardId;
+              const supportsAuth = summary.intents.length === 1 &&
+                (summary.intents[0].action === 'transfer' || summary.intents[0].action === 'swap');
 
-            {/* Transaction Info */}
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="p-3 bg-slate-700/30 rounded-lg">
-                <div className="text-xs text-slate-400 mb-1">操作数量</div>
-                <div className="text-lg font-semibold text-white">{txSummary.intents.length}</div>
-              </div>
-              <div className="p-3 bg-slate-700/30 rounded-lg">
-                <div className="text-xs text-slate-400 mb-1">预估 Gas</div>
-                <div className="text-lg font-semibold text-white">{txSummary.gasEstimate}</div>
-              </div>
-              {/* 授权模式状态 */}
-              {useAuthMode && authObjectId && txSummary.intents.length === 1 && (txSummary.intents[0].action === 'transfer' || txSummary.intents[0].action === 'swap') && (
-                <div className="col-span-2 p-3 bg-green-900/20 border border-green-500/20 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-green-400" />
-                    <div>
-                      <div className="text-xs text-green-300">授权模式</div>
-                      <div className="text-xs text-green-400">
-                        此交易将使用授权对象执行，无需重复签名
-                        {txSummary.intents[0].action === 'swap' && '（Swap Wrapper 已部署）'}
-                      </div>
+              return (
+                <div
+                  key={summary.cardId}
+                  className="p-6 bg-slate-800/50 border border-green-500/20 rounded-lg"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <Code className="w-5 h-5" />
+                      {summary.intents[0].action.toUpperCase()}
+                      <span className="text-xs text-slate-400 font-normal">
+                        ({(summary.intents[0].confidence * 100).toFixed(0)}% 匹配)
+                      </span>
+                    </h3>
+                    <div className="flex gap-2">
+                      {isConnected && (
+                        <Button
+                          onClick={() => executeTransaction(summary.cardId)}
+                          disabled={executing}
+                          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                        >
+                          {isCurrentlyExecuting ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              执行中...
+                            </>
+                          ) : (
+                            '确认并签名'
+                          )}
+                        </Button>
+                      )}
+                      <Button
+                        onClick={() => copyTransaction(summary.cardId)}
+                        variant="outline"
+                        className="border-slate-600 text-slate-300 hover:bg-slate-700 text-xs px-3 py-1 h-8"
+                      >
+                        <Copy className="w-4 h-4 mr-2" />
+                        复制
+                      </Button>
                     </div>
                   </div>
-                  <CheckCircle2 className="w-5 h-5 text-green-400" />
+
+                  {/* Intent Parameters */}
+                  <div className="mb-4 p-4 bg-slate-700/30 border border-slate-600 rounded-lg">
+                    <div className="text-xs text-slate-400 mb-2">操作参数</div>
+                    <pre className="text-xs text-slate-300 overflow-x-auto">
+                      {JSON.stringify(summary.intents[0].params, null, 2)}
+                    </pre>
+                  </div>
+
+                  {/* Transaction Info */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="p-3 bg-slate-700/30 rounded-lg">
+                      <div className="text-xs text-slate-400 mb-1">操作类型</div>
+                      <div className="text-lg font-semibold text-white capitalize">
+                        {summary.intents[0].action}
+                      </div>
+                    </div>
+                    <div className="p-3 bg-slate-700/30 rounded-lg">
+                      <div className="text-xs text-slate-400 mb-1">预估 Gas</div>
+                      <div className="text-lg font-semibold text-white">{summary.gasEstimate}</div>
+                    </div>
+
+                    {/* 授权模式状态 */}
+                    {useAuthMode && authObjectId && supportsAuth && (
+                      <div className="col-span-2 p-3 bg-green-900/20 border border-green-500/20 rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Shield className="w-5 h-5 text-green-400" />
+                          <div>
+                            <div className="text-xs text-green-300">授权模式</div>
+                            <div className="text-xs text-green-400">
+                              此交易将使用授权对象执行，无需重复签名
+                              {summary.intents[0].action === 'swap' && '（Swap Wrapper 已部署）'}
+                            </div>
+                          </div>
+                        </div>
+                        <CheckCircle2 className="w-5 h-5 text-green-400" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Transaction Data */}
+                  <div className="p-4 bg-slate-900/50 border border-slate-600 rounded-lg">
+                    <div className="text-xs text-slate-400 mb-2">Serialized Transaction (Base64)</div>
+                    <textarea
+                      readOnly
+                      value={summary.txData}
+                      className="w-full h-24 bg-transparent text-xs text-green-300 font-mono resize-none focus:outline-none"
+                    />
+                  </div>
                 </div>
-              )}
-            </div>
+              );
+            })}
 
-            {/* Transaction Data */}
-            <div className="p-4 bg-slate-900/50 border border-slate-600 rounded-lg mb-4">
-              <div className="text-xs text-slate-400 mb-2">Serialized Transaction (Base64)</div>
-              <textarea
-                readOnly
-                value={txSummary.txData}
-                className="w-full h-32 bg-transparent text-xs text-green-300 font-mono resize-none focus:outline-none"
-              />
-            </div>
-
-            {/* Transaction Digest */}
+            {/* Transaction Digest (shown after any transaction succeeds) */}
             {txDigest && (
-              <div className="p-4 bg-green-900/20 border border-green-500/20 rounded-lg mb-4">
+              <div className="p-4 bg-green-900/20 border border-green-500/20 rounded-lg">
                 <div className="text-sm text-green-200 mb-2">交易已提交</div>
                 <div className="flex items-center gap-2">
                   <code className="text-xs text-green-300 font-mono flex-1 break-all">
@@ -576,14 +646,18 @@ export default function Home() {
                 <div className="text-sm text-blue-200">
                   <p className="font-medium mb-1">交易说明</p>
                   <p className="text-blue-300/80">
-                    此交易已通过以下安全检查：
+                    {txSummaries.length > 1
+                      ? '检测到组合操作，已自动拆分成独立交易。每个交易可以单独执行。'
+                      : '此交易已通过以下安全检查：'}
                   </p>
-                  <ul className="mt-2 space-y-1 text-xs text-blue-300/60">
-                    <li>Cetus DEX 主网集成</li>
-                    <li>滑点保护机制</li>
-                    <li>余额验证</li>
-                    <li>原子执行保证</li>
-                  </ul>
+                  {txSummaries.length === 1 && (
+                    <ul className="mt-2 space-y-1 text-xs text-blue-300/60">
+                      <li>Cetus DEX 主网集成</li>
+                      <li>滑点保护机制</li>
+                      <li>余额验证</li>
+                      <li>原子执行保证</li>
+                    </ul>
+                  )}
                 </div>
               </div>
             </div>

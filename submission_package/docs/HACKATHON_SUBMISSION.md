@@ -77,7 +77,7 @@
 ## 🔗 重要链接（Links）
 
 ### 1. GitHub 仓库（必需）
-**URL**: https://github.com/your-org/sui-intent-agent
+**URL**: https://github.com/mason0510/otter
 
 **仓库包含**：
 - ✅ 完整源代码
@@ -88,8 +88,8 @@
 
 **Quick Start**:
 ```bash
-git clone https://github.com/your-org/sui-intent-agent.git
-cd sui-intent-agent
+git clone https://github.com/mason0510/otter.git
+cd otter
 npm install
 cp .env.example .env
 # 填入 DEEPSEEK_API_KEY
@@ -150,7 +150,7 @@ npm run dev
 - 配置：清晰的鼠标移动 + 旁白解说（可选）
 
 **视频上传**：
-- YouTube: https://youtube.com/watch?v=your-video-id
+- YouTube: [待添加]
 - 或直接上传 MP4 文件
 
 ---
@@ -230,9 +230,9 @@ npm run dev
 
 ## Links
 
-**GitHub**: https://github.com/your-org/sui-intent-agent
+**GitHub**: https://github.com/mason0510/otter
 **Website**: http://82.29.54.80:3025
-**Demo Video**: https://youtube.com/watch?v=your-video-id
+**Demo Video**: [待添加]
 
 ---
 
@@ -297,8 +297,8 @@ npm run dev
 ## 📞 联系方式
 
 如有问题，联系：
-- GitHub Issues: https://github.com/your-org/sui-intent-agent/issues
-- Discord: [Your Discord ID]
+- GitHub Issues: https://github.com/mason0510/otter/issues
+- Discord: [待添加]
 - Twitter: @mason1
 
 ---

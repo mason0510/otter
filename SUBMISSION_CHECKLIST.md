@@ -159,9 +159,9 @@ Advisor: Ben (@bencon9999)
 
 #### Links
 ```
-GitHub: https://github.com/your-org/sui-intent-agent
+GitHub: https://github.com/mason0510/otter
 Website: http://82.29.54.80:3025
-Demo Video: [YouTube 链接]
+Demo Video: [待添加]
 ```
 
 #### Media

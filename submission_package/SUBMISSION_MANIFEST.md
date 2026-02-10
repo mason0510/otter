@@ -68,7 +68,7 @@ Advisor: Ben (@bencon9999)
 ### Links
 
 ```
-GitHub: https://github.com/mason1/otter
+GitHub: https://github.com/mason0510/otter
 Website: http://82.29.54.80:3025
 Demo Video: [待录制后填写]
 ```
@@ -107,7 +107,7 @@ Demo Video: [待录制后填写]
 ```bash
 # 创建 GitHub 仓库后，执行以下命令：
 
-git remote add origin https://github.com/mason1/otter.git
+git remote add origin https://github.com/mason0510/otter.git
 git branch -M main
 git push -u origin main
 ```

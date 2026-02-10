@@ -557,7 +557,7 @@ export default function Home() {
           <p>Built for Sui Vibe Spring Fest 2026 Hackathon</p>
           <p className="mt-1">
             <a
-              href="https://github.com/yourusername/otter"
+              href="https://github.com/mason0510/otter"
               target="_blank"
               rel="noopener noreferrer"
               className="text-purple-400 hover:text-purple-300"

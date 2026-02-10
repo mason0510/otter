@@ -18,7 +18,7 @@
 ### 1. 安装依赖
 
 ```bash
-cd sui-intent-agent
+cd otter
 
 # 安装 Node.js 依赖
 npm install
@@ -65,7 +65,7 @@ npm run dev
 ## 📁 项目结构
 
 ```
-sui-intent-agent/
+otter/
 ├── app/
 │   ├── api/
 │   │   └── intent/

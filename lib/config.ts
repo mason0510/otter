@@ -4,7 +4,8 @@
 
 // 授权合约 Package ID（已部署到主网）
 // 这个地址会在用户创建授权时作为 agent 参数使用
-export const AUTH_PACKAGE_ID = process.env.NEXT_PUBLIC_AUTH_PACKAGE_ID || '0x91f2fdf66111c9eada5c6c17a360ea3a1bf6e54e72c4589b0b10279627cc6371';
+// 2026-02-10: 更新为 v3 统一架构（与 SWAP_WRAPPER_PACKAGE_ID 一致）
+export const AUTH_PACKAGE_ID = process.env.NEXT_PUBLIC_AUTH_PACKAGE_ID || '0x3724706eedf587b87475f9b9560f7bccb31c3c783b9f1f48f2a1fc76885d5c3a';
 
 // Swap Wrapper 合约 Package ID
 // 注意：swap_wrapper 模块已集成到 authorization 包中

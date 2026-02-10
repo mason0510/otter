@@ -11,6 +11,9 @@ module authorization::auth {
     use std::string::{Self, String};
     use sui::event;
 
+    // 声明 swap_wrapper 为 friend，允许访问 Authorization
+    friend authorization::swap_wrapper;
+
     /// 错误码
     const ENOT_AUTHORIZED: u64 = 0;      // 未授权
     const EEXCEED_LIMIT: u64 = 1;        // 超过限额
@@ -217,5 +220,60 @@ module authorization::auth {
         let used_today = if (days_since_last_reset > 0) 0 else auth.used_today;
 
         used_today + amount <= auth.daily_limit
+    }
+
+    // ============ Friend Functions for swap_wrapper ============
+
+    /// Friend 函数：检查授权并更新使用量（用于 Swap）
+    /// 返回：(是否需要重置, 当前时间戳)
+    public(friend) fun check_and_update_auth(
+        auth: &mut Authorization,
+        amount: u64,
+        now: u64
+    ) {
+        // 1. 检查授权状态
+        assert!(auth.enabled, EDISABLED);
+        assert!(now <= auth.expiry, EEXPIRED);
+
+        // 2. 检查单笔限额
+        assert!(amount > 0, EINVALID_AMOUNT);
+        assert!(amount <= auth.per_tx_limit, EEXCEED_LIMIT);
+
+        // 3. 检查并重置每日额度
+        let days_since_last_reset = (now - auth.last_reset) / (24 * 3600);
+        if (days_since_last_reset > 0) {
+            auth.used_today = 0;
+            auth.last_reset = now;
+        };
+
+        // 4. 检查每日限额
+        let new_used = auth.used_today + amount;
+        assert!(new_used <= auth.daily_limit, EEXCEED_LIMIT);
+
+        // 5. 更新已用额度
+        auth.used_today = new_used;
+    }
+
+    /// Friend 函数：获取授权的 owner 地址
+    public(friend) fun get_owner(auth: &Authorization): address {
+        auth.owner
+    }
+
+    /// Friend 函数：获取授权的 agent 地址
+    public(friend) fun get_agent(auth: &Authorization): address {
+        auth.agent
+    }
+
+    /// Friend 函数：获取授权的 token_type
+    public(friend) fun get_token_type(auth: &Authorization): String {
+        auth.token_type
+    }
+
+    /// Friend 函数：验证调用者权限（owner 或 agent）
+    public(friend) fun verify_caller(
+        auth: &Authorization,
+        caller: address
+    ) {
+        assert!(auth.owner == caller || auth.agent == caller, ENOT_AUTHORIZED);
     }
 }

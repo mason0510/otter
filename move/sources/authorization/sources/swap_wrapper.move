@@ -12,20 +12,26 @@ module authorization::swap_wrapper {
     use sui::sui::SUI;
     use sui::tx_context::{Self, TxContext};
     use sui::transfer;
-    use sui::object::{Self, UID};
     use sui::clock::{Self, Clock};
+    use sui::object::UID;
     use std::string::{Self, String};
     use sui::event;
 
-    /// 错误码
-    const ENOT_AUTHORIZED: u64 = 0;      // 未授权
-    const EEXCEED_LIMIT: u64 = 1;        // 超过限额
-    const EEXPIRED: u64 = 2;             // 授权已过期
-    const EDISABLED: u64 = 3;            // 授权已禁用
-    const EINVALID_AMOUNT: u64 = 4;      // 无效金额
-    const ENOT_OWNER: u64 = 7;           // 不是所有者
+    // 导入 auth 模块（不导入 Authorization 以避免命名冲突）
+    use authorization::auth;
 
-    /// 授权对象（内联定义，避免跨包依赖）
+    /// Swap 执行事件
+    struct SwapExecuted has copy, drop {
+        owner: address,
+        input_token: String,
+        output_token: String,
+        input_amount: u64,
+        output_amount: u64,
+        timestamp: u64,
+    }
+
+    /// 授权对象（已废弃，保留用于升级兼容性）
+    /// 新代码请使用 authorization::auth::Authorization
     struct Authorization has key, store {
         id: UID,
         owner: address,
@@ -39,30 +45,8 @@ module authorization::swap_wrapper {
         enabled: bool,
     }
 
-    /// Swap 执行事件
-    struct SwapExecuted has copy, drop {
-        owner: address,
-        input_token: String,
-        output_token: String,
-        input_amount: u64,
-        output_amount: u64,
-        timestamp: u64,
-    }
-
-    /// 使用授权执行 Swap（简化版本）
-    ///
-    /// 注意：这是一个基础实现，需要集成实际的 DEX（如 Cetus）
-    ///
-    /// 参数：
-    /// - auth: 授权对象（Shared Object）
-    /// - input_coin: 输入代币 Coin
-    /// - output_token_type: 输出代币类型
-    /// - min_output: 最小输出量（滑点保护）
-    /// - clock: Clock 对象
-    /// - ctx: 交易上下文
-    ///
-    /// 返回：
-    /// - 输出代币 Coin（转给调用者）
+    /// 使用授权执行 Swap（旧版本，已废弃）
+    /// 保留用于升级兼容性，新代码请使用 execute_swap_with_auth_v2
     public fun execute_swap_with_auth(
         auth: &mut Authorization,
         input_coin: Coin<SUI>,
@@ -73,40 +57,38 @@ module authorization::swap_wrapper {
         let sender = tx_context::sender(ctx);
         let now = clock::timestamp_ms(clock) / 1000;
 
-        // 1. 检查授权状态
-        assert!(auth.enabled == true, EDISABLED);
-        assert!(now <= auth.expiry, EEXPIRED);
-        assert!(auth.agent == tx_context::sender(ctx) || auth.owner == tx_context::sender(ctx), ENOT_AUTHORIZED);
+        // 检查授权状态
+        assert!(auth.enabled == true, 3);
+        assert!(now <= auth.expiry, 2);
+        assert!(auth.agent == tx_context::sender(ctx) || auth.owner == tx_context::sender(ctx), 0);
 
-        // 2. 获取输入金额
+        // 获取输入金额
         let input_amount = coin::value(&input_coin);
-        assert!(input_amount > 0, EINVALID_AMOUNT);
-        assert!(input_amount <= auth.per_tx_limit, EEXCEED_LIMIT);
+        assert!(input_amount > 0, 4);
+        assert!(input_amount <= auth.per_tx_limit, 1);
 
-        // 3. 检查并重置每日额度
+        // 检查并重置每日额度
         let days_since_last_reset = (now - auth.last_reset) / (24 * 3600);
         if (days_since_last_reset > 0) {
             auth.used_today = 0;
             auth.last_reset = now;
         };
 
-        // 4. 检查每日限额
+        // 检查每日限额
         let new_used = auth.used_today + input_amount;
-        assert!(new_used <= auth.daily_limit, EEXCEED_LIMIT);
+        assert!(new_used <= auth.daily_limit, 1);
 
-        // 5. 执行 Swap（这里需要集成实际 DEX）
-        // 注意：这是简化版本，实际需要调用 Cetus swap_router
-        // 暂时直接返回原 Coin（无实际 Swap）
+        // 执行 Swap（暂时直接返回原 Coin）
         let output_coin = input_coin;
 
-        // 6. 更新授权使用量
+        // 更新授权使用量
         auth.used_today = new_used;
 
-        // 7. 转账输出 Coin 给调用者
+        // 转账输出 Coin 给调用者
         let output_amount = coin::value(&output_coin);
         transfer::public_transfer(output_coin, sender);
 
-        // 8. 发送事件
+        // 发送事件
         event::emit(SwapExecuted {
             owner: auth.owner,
             input_token: auth.token_type,
@@ -117,8 +99,50 @@ module authorization::swap_wrapper {
         });
     }
 
-    /// 创建测试用的授权对象（仅用于测试）
-    public entry fun create_test_authorization(
+    /// 使用授权执行 Swap（新版本，推荐）
+    /// 使用统一的 authorization::auth::Authorization
+    public fun execute_swap_with_auth_v2(
+        auth: &mut authorization::auth::Authorization,
+        input_coin: Coin<SUI>,
+        _min_output: u64,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
+        let sender = tx_context::sender(ctx);
+        let now = clock::timestamp_ms(clock) / 1000;
+
+        // 1. 验证调用者权限（owner 或 agent）
+        auth::verify_caller(auth, sender);
+
+        // 2. 获取输入金额
+        let input_amount = coin::value(&input_coin);
+
+        // 3. 检查授权并更新使用量（调用 friend 函数）
+        auth::check_and_update_auth(auth, input_amount, now);
+
+        // 4. 执行 Swap（这里需要集成实际 DEX）
+        // 注意：这是简化版本，实际需要调用 Cetus swap_router
+        // 暂时直接返回原 Coin（无实际 Swap）
+        let output_coin = input_coin;
+
+        // 5. 转账输出 Coin 给调用者
+        let output_amount = coin::value(&output_coin);
+        transfer::public_transfer(output_coin, sender);
+
+        // 6. 发送事件
+        event::emit(SwapExecuted {
+            owner: auth::get_owner(auth),
+            input_token: auth::get_token_type(auth),
+            output_token: string::utf8(b"SUI"),
+            input_amount,
+            output_amount,
+            timestamp: now,
+        });
+    }
+
+    /// 创建测试用的授权对象（已废弃，保留用于升级兼容性）
+    /// 新代码请使用 authorization::auth::create_authorization
+    public fun create_test_authorization(
         agent: address,
         token_type: String,
         daily_limit: u64,
@@ -126,6 +150,7 @@ module authorization::swap_wrapper {
         validity_days: u64,
         ctx: &mut TxContext
     ) {
+        use sui::object;
         let owner = tx_context::sender(ctx);
         let now = tx_context::epoch_timestamp_ms(ctx) / 1000;
         let expiry = now + (validity_days * 24 * 3600);
@@ -146,7 +171,8 @@ module authorization::swap_wrapper {
         transfer::public_share_object(auth);
     }
 
-    /// 查询授权状态
+    /// 查询授权状态（已废弃，保留用于升级兼容性）
+    /// 新代码请使用 authorization::auth::get_auth_status
     public fun get_auth_status(
         auth: &Authorization
     ): (bool, u64, u64, u64, u64, u64) {
@@ -160,7 +186,8 @@ module authorization::swap_wrapper {
         )
     }
 
-    /// 检查是否可以执行
+    /// 检查是否可以执行（已废弃，保留用于升级兼容性）
+    /// 新代码请使用 authorization::auth::can_execute
     public fun can_execute(
         auth: &Authorization,
         amount: u64,
@@ -178,30 +205,33 @@ module authorization::swap_wrapper {
         used_today + amount <= auth.daily_limit
     }
 
-    /// 禁用授权
+    /// 禁用授权（已废弃，保留用于升级兼容性）
+    /// 新代码请使用 authorization::auth::disable_authorization
     public fun disable_authorization(
         auth: &mut Authorization,
         ctx: &mut TxContext
     ) {
-        assert!(auth.owner == tx_context::sender(ctx), ENOT_OWNER);
+        assert!(auth.owner == tx_context::sender(ctx), 7);
         auth.enabled = false;
     }
 
-    /// 重新启用授权
+    /// 重新启用授权（已废弃，保留用于升级兼容性）
+    /// 新代码请使用 authorization::auth::enable_authorization
     public fun enable_authorization(
         auth: &mut Authorization,
         ctx: &mut TxContext
     ) {
-        assert!(auth.owner == tx_context::sender(ctx), ENOT_OWNER);
+        assert!(auth.owner == tx_context::sender(ctx), 7);
         auth.enabled = true;
     }
 
-    /// 撤销授权（禁用）
+    /// 撤销授权（已废弃，保留用于升级兼容性）
+    /// 新代码请使用 authorization::auth::revoke_authorization
     public fun revoke_authorization_internal(
         auth: &mut Authorization,
         ctx: &mut TxContext
     ) {
-        assert!(auth.owner == tx_context::sender(ctx), ENOT_OWNER);
+        assert!(auth.owner == tx_context::sender(ctx), 7);
         auth.enabled = false;
     }
 }

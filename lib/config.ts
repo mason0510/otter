@@ -8,8 +8,8 @@ export const AUTH_PACKAGE_ID = process.env.NEXT_PUBLIC_AUTH_PACKAGE_ID || '0x91f
 
 // Swap Wrapper 合约 Package ID
 // 注意：swap_wrapper 模块已集成到 authorization 包中
-// 2026-02-10 部署到 Mainnet
-export const SWAP_WRAPPER_PACKAGE_ID = "0x584aeac7ed367b595b453547ab6caa0c2b0dd8f580b88227585c914b26324f3f";
+// 2026-02-10 升级到 v3（统一授权架构）
+export const SWAP_WRAPPER_PACKAGE_ID = "0x3724706eedf587b87475f9b9560f7bccb31c3c783b9f1f48f2a1fc76885d5c3a";
 
 // 默认授权参数（测试期间使用较小金额）
 export const DEFAULT_AUTH_PARAMS = {

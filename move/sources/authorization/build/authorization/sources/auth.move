@@ -11,9 +11,6 @@ module authorization::auth {
     use std::string::{Self, String};
     use sui::event;
 
-    // 声明 swap_wrapper 为 friend，允许访问 Authorization
-    friend authorization::swap_wrapper;
-
     /// 错误码
     const ENOT_AUTHORIZED: u64 = 0;      // 未授权
     const EEXCEED_LIMIT: u64 = 1;        // 超过限额
@@ -23,7 +20,7 @@ module authorization::auth {
     const ENOT_OWNER: u64 = 5;           // 不是所有者
 
     /// 授权对象（Shared Object）
-    struct Authorization has key {
+    public struct Authorization has key {
         id: UID,
         owner: address,
         agent: address,
@@ -37,7 +34,7 @@ module authorization::auth {
     }
 
     /// 授权记录
-    struct AuthRecord has key {
+    public struct AuthRecord has key {
         id: UID,
         owner: address,
         agent: address,
@@ -46,7 +43,7 @@ module authorization::auth {
     }
 
     /// 授权创建事件
-    struct AuthCreated has copy, drop {
+    public struct AuthCreated has copy, drop {
         owner: address,
         daily_limit: u64,
         per_tx_limit: u64,
@@ -54,7 +51,7 @@ module authorization::auth {
     }
 
     /// 授权使用事件
-    struct AuthUsed has copy, drop {
+    public struct AuthUsed has copy, drop {
         owner: address,
         amount: u64,
         used_today: u64,
@@ -226,7 +223,7 @@ module authorization::auth {
 
     /// Friend 函数：检查授权并更新使用量（用于 Swap）
     /// 返回：(是否需要重置, 当前时间戳)
-    public(friend) fun check_and_update_auth(
+    public(package) fun check_and_update_auth(
         auth: &mut Authorization,
         amount: u64,
         now: u64
@@ -255,22 +252,22 @@ module authorization::auth {
     }
 
     /// Friend 函数：获取授权的 owner 地址
-    public(friend) fun get_owner(auth: &Authorization): address {
+    public(package) fun get_owner(auth: &Authorization): address {
         auth.owner
     }
 
     /// Friend 函数：获取授权的 agent 地址
-    public(friend) fun get_agent(auth: &Authorization): address {
+    public(package) fun get_agent(auth: &Authorization): address {
         auth.agent
     }
 
     /// Friend 函数：获取授权的 token_type
-    public(friend) fun get_token_type(auth: &Authorization): String {
+    public(package) fun get_token_type(auth: &Authorization): String {
         auth.token_type
     }
 
     /// Friend 函数：验证调用者权限（owner 或 agent）
-    public(friend) fun verify_caller(
+    public(package) fun verify_caller(
         auth: &Authorization,
         caller: address
     ) {

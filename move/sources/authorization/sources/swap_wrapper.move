@@ -21,7 +21,7 @@ module authorization::swap_wrapper {
     use authorization::auth;
 
     /// Swap 执行事件
-    struct SwapExecuted has copy, drop {
+    public struct SwapExecuted has copy, drop {
         owner: address,
         input_token: String,
         output_token: String,
@@ -32,7 +32,7 @@ module authorization::swap_wrapper {
 
     /// 授权对象（已废弃，保留用于升级兼容性）
     /// 新代码请使用 authorization::auth::Authorization
-    struct Authorization has key, store {
+    public struct Authorization has key, store {
         id: UID,
         owner: address,
         agent: address,

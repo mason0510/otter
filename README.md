@@ -358,11 +358,11 @@ In the development of Otter, we utilized AI tools to enhance productivity and ex
 
 ### AI Tool(s) Used
 
-- **Name**: Anthropic Claude
+- **Tool Name**: Claude Code (Anthropic's official CLI)
 - **Model Versions**:
-  - Claude 3.5 Sonnet (primary development)
-  - Claude 3 Opus (architecture design)
-- **Access Method**: Claude Code CLI + API
+  - `claude-sonnet-4-5-20250929` (Claude Sonnet 4.5 - primary development)
+  - `claude-haiku-4-5-20251001` (Claude Haiku 4.5 - quick iterations)
+- **Access Method**: Claude Code CLI
 
 ### Scope of Use
 

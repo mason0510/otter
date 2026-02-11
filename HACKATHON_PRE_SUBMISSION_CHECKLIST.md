@@ -48,22 +48,28 @@
 
 ### 3️⃣ 官方 Sui SDK
 - **要求**: 使用官方 Sui SDK（@mysten/sui, @mysten/dapp-kit）
-- **状态**: ✅ **PASS** (已升级到最新版本)
+- **状态**: ✅ **PASS** (使用稳定版本，兼容 Cetus SDK)
 - **证据**:
   ```json
-  "@mysten/sui": "^2.3.2",          // 最新版本 (2026-02-11)
-  "@mysten/dapp-kit": "^1.0.3",     // 最新正式版
-  "@cetusprotocol/sui-clmm-sdk": "^1.4.0"
+  "@mysten/sui": "1.45.2",          // 官方 SDK 1.x 最新版 (兼容 Cetus)
+  "@mysten/dapp-kit": "0.20.0",     // 与 Sui 1.x 配套版本
+  "@cetusprotocol/sui-clmm-sdk": "1.4.0"
   ```
-- **修复内容**:
-  - ✅ 升级 @mysten/sui: 1.45.2 → 2.3.2
-  - ✅ 升级 @mysten/dapp-kit: 0.20.0 → 1.0.3
-  - ✅ 升级 next: 15.1.3 → 16.1.6 (修复安全漏洞 CVE-2025-66478)
+- **版本选择说明**:
+  - ✅ 使用 @mysten/sui 1.45.2（官方 1.x 最新版）
+  - ✅ Cetus SDK 1.4.0 仅支持 @mysten/sui 1.x
+  - ✅ @mysten/sui 2.x 与 Cetus SDK 不兼容（Breaking API Changes）
+  - ✅ 黑客松要求"官方 SDK"，未要求"最新版本"
+  - ✅ 选择稳定兼容版本符合工程最佳实践
+- **技术决策**:
+  - Cetus Track 要求集成 Cetus DEX，必须使用兼容的 SDK 版本
+  - @mysten/sui 1.45.2 是 1.x 系列最新版，仍属"官方 SDK"
+  - Next.js 15.5.12（而非 16.x）以避免 Turbopack 兼容问题
 - **验证命令**:
   ```bash
-  npm show @mysten/sui version
-  npm show @mysten/dapp-kit version
   grep "@mysten" package.json
+  npm list @mysten/sui @mysten/dapp-kit
+  npm audit  # 验证无安全漏洞
   ```
 - **安全状态**: ✅ **0 vulnerabilities**
 

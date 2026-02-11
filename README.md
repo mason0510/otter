@@ -352,6 +352,97 @@ open http://localhost:3000
 
 ---
 
+## 🤖 AI Usage Disclosure
+
+In the development of Otter, we utilized AI tools to enhance productivity and explore creative solutions. We are committed to transparency and disclose our usage as follows:
+
+### AI Tool(s) Used
+
+- **Name**: Anthropic Claude
+- **Model Versions**:
+  - Claude 3.5 Sonnet (primary development)
+  - Claude 3 Opus (architecture design)
+- **Access Method**: Claude Code CLI + API
+
+### Scope of Use
+
+1. **Code Generation & Refactoring**
+   - Generating boilerplate code for React components and TypeScript utilities
+   - Refactoring complex PTB building logic
+   - Creating Sui Move smart contract templates
+
+2. **Debugging & Problem Solving**
+   - Analyzing error messages from Sui SDK
+   - Troubleshooting blockchain transaction failures
+   - Optimizing gas usage patterns
+
+3. **Architecture & Logic Design**
+   - Designing the intent parsing pipeline
+   - Structuring the policy validation layer
+   - Planning the PTB assembly strategy
+
+4. **Documentation & Content**
+   - Drafting sections of this README
+   - Generating code comments and JSDoc
+   - Creating technical architecture diagrams
+
+### Key Prompt Examples
+
+**Example 1 - Frontend Component Generation:**
+```
+"Create a React component using TypeScript and Tailwind CSS for a swap interface.
+It should have:
+- Two token input fields with amount
+- Token selection dropdown (SUI, USDC, USDT)
+- Slippage control slider
+- 'Swap' button that calls buildSwapPTB()
+Use @mysten/dapp-kit for wallet connection."
+```
+
+**Example 2 - Intent Parsing Logic:**
+```
+"I need to parse natural language like 'swap 10 SUI for USDC with 3% slippage'.
+Design a JSON structure to represent this intent. It should include:
+- action type (swap/transfer/split)
+- input token, amount
+- output token
+- slippage percentage
+- confidence score (0-1)
+Provide the TypeScript interface."
+```
+
+**Example 3 - Sui Move Contract:**
+```
+"Create a Sui Move module for authorization. It should:
+- Allow users to authorize an agent address
+- Set daily spending limit
+- Track used amount
+- Automatically reset at UTC midnight
+Use Move 2024 syntax with Clock object."
+```
+
+**Example 4 - PTB Building:**
+```
+"Show me how to build a Sui PTB that:
+1. Splits a SUI coin into two parts
+2. Swaps part 1 for USDC on Cetus
+3. Transfers part 2 to a recipient
+All operations should be atomic (succeed or fail together).
+Use @mysten/sui Transaction class."
+```
+
+**Example 5 - Error Handling:**
+```
+"I'm getting this error when calling Cetus SDK:
+[paste error message]
+Analyze the root cause and suggest a fix. Consider:
+- SDK version compatibility
+- Pool initialization
+- Coin decimal handling"
+```
+
+---
+
 ## 团队
 
 - **开发者**: Mason (@mason1) | 11年区块链全栈工程师
